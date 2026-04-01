@@ -20,6 +20,9 @@ from routers import (
     code_runner,
     user_data,
     placement,
+    ml_router,
+    coding_profile,
+    daily_plan,
 )
 
 app = FastAPI(
@@ -69,6 +72,15 @@ app.include_router(user_data.router, prefix="/api/user-data", tags=["User Data"]
 
 # ================= PLACEMENT ANALYTICS =================
 app.include_router(placement.router, prefix="/api/placement", tags=["Placement Analytics"])
+
+# ================= ML PREDICTIONS =================
+app.include_router(ml_router.router, prefix="/api/ml", tags=["ML Predictions"])
+
+# ================= CODING PROFILE AGGREGATOR =================
+app.include_router(coding_profile.router, prefix="/api/coding-profile", tags=["Coding Profile"])
+
+# ================= SMART DAILY PLAN =================
+app.include_router(daily_plan.router, prefix="/api/daily-plan", tags=["Daily Plan"])
 
 # ================= ROOT =================
 @app.get("/")
