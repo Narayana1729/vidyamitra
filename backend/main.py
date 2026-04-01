@@ -31,13 +31,8 @@ app = FastAPI(
 # ================= CORS =================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-        "https://pgpsbvb8-5173.inc1.devtunnels.ms"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],   # Open for local WiFi demos — restrict in production
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

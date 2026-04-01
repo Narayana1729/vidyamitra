@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Briefcase, MapPin, DollarSign, List, ArrowRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API = 'http://localhost:8000/api';
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
 
 export default function PostJob() {
   const navigate = useNavigate();
