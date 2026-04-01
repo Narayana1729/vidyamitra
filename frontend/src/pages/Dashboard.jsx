@@ -8,6 +8,7 @@ import StatsGrid from '../components/dashboard/StatsGrid';
 import InsightsSection from '../components/dashboard/InsightsSection';
 import ChartsSection from '../components/dashboard/ChartsSection';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
+import DailyPlan from '../components/dashboard/DailyPlan';
 
 const PERIODS = [
   { key: 'week', label: 'This Week' },
@@ -188,6 +189,9 @@ export default function Dashboard() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
+            {/* 0. Smart Daily To-Do */}
+            <DailyPlan />
+
             {/* 1. Placement Readiness */}
             {readiness && <ReadinessCard readiness={readiness} />}
 
