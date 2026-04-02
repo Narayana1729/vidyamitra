@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, FileText, Brain, Mic, TrendingUp } from 'lucide-react';
 import ScoreCircle from '../ScoreCircle';
@@ -18,6 +19,10 @@ const activityColors = {
 };
 
 export default function ActivityFeed({ activity, stats }) {
+  const [expanded, setExpanded] = useState(false);
+  const displayedActivity = expanded ? activity : activity.slice(0, 3);
+  const hasMore = activity.length > 3;
+
   return (
     <div className="grid-2">
       {/* Key Metrics */}
@@ -47,7 +52,7 @@ export default function ActivityFeed({ activity, stats }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {activity.map((a, i) => (
+            {displayedActivity.map((a, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
@@ -76,6 +81,22 @@ export default function ActivityFeed({ activity, stats }) {
                 </div>
               </motion.div>
             ))}
+            {hasMore && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                style={{
+                  background: 'none', border: 'none',
+                  color: 'var(--accent-primary)', fontSize: 13,
+                  cursor: 'pointer', marginTop: 8, padding: 8,
+                  fontWeight: 500, transition: 'color 0.2s',
+                  display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-light)'}
+                onMouseOut={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+              >
+                {expanded ? 'Show Less' : `View All (${activity.length})`}
+              </button>
+            )}
           </div>
         )}
       </div>

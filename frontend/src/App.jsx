@@ -17,6 +17,8 @@ import Dashboard from './pages/Dashboard';
 import JobBoard from './pages/JobBoard';
 import MyApplications from './pages/MyApplications';
 import DomainSwitch from './pages/DomainSwitch';
+import CodingProfile from './pages/CodingProfile';
+import MentorixChat from './components/MentorixChat';
 
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import PostJob from './pages/company/PostJob';
@@ -44,6 +46,7 @@ function StudentLayout() {
           <Route path="/jobs" element={<ProtectedRoute requiredRole="student"><JobBoard /></ProtectedRoute>} />
           <Route path="/applications" element={<ProtectedRoute requiredRole="student"><MyApplications /></ProtectedRoute>} />
           <Route path="/domain-switch" element={<ProtectedRoute requiredRole="student"><DomainSwitch /></ProtectedRoute>} />
+          <Route path="/coding-profile" element={<ProtectedRoute requiredRole="student"><CodingProfile /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -117,6 +120,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AppRoutes />
+          <MentorixChat />
         </BrowserRouter>
       </AuthProvider>
     </ThemeContext.Provider>

@@ -1568,3 +1568,37 @@ body::after {
 @media (max-width: 480px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
+
+/* ========================================= */
+/* 📱 MOBILE RESPONSIVENESS                   */
+/* ========================================= */
+
+@media (max-width: 640px) {
+  .glass-card {
+    padding: 16px !important;
+  }
+  
+  .page-header h1 {
+    font-size: 24px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .page-header {
+    margin-bottom: 24px;
+  }
+  
+  /* Make inline flex items stack gracefully if cramped */
+  .mobile-stack {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  
+  /* For modals on mobile to not be too wide/padded */
+  .modal-content {
+    padding: 24px !important;
+    width: calc(100% - 32px) !important;
+  }
+}

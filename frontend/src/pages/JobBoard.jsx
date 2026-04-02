@@ -6,7 +6,7 @@ import { Search, MapPin, Briefcase, CheckCircle, ExternalLink, TrendingUp, Trend
 import { useAuth } from '../context/AuthContext';
 import { getDomainData } from '../utils/domainData';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
 
 // ── Market Trend Data ──
 // These are dynamically loaded inside the component based on user domain
@@ -48,8 +48,21 @@ export default function JobBoard() {
 
   const fetchJobs = async () => {
     try {
-      const res = await axios.get(`${API}/jobs`, { params: { search } });
-      const fetchedJobs = res.data.jobs || [];
+      // Fetch internal and external jobs in parallel
+      const [internalRes, externalRes] = await Promise.allSettled([
+        axios.get(`${API}/jobs`, { params: { search } }),
+        axios.get(`${API}/jobs/external`, { params: { search } })
+      ]);
+
+      let fetchedJobs = [];
+      if (internalRes.status === 'fulfilled') {
+        fetchedJobs = [...fetchedJobs, ...(internalRes.value.data.jobs || [])];
+      }
+      if (externalRes.status === 'fulfilled') {
+        const extJobs = externalRes.value.data.jobs || [];
+        // Map any null arrays to empty arrays to prevent errors
+        fetchedJobs = [...fetchedJobs, ...extJobs.map(j => ({...j, skills_required: j.skills_required || []}))];
+      }
 
       // Get user's skills for match scoring
       const uid = user?.id;
@@ -445,10 +458,16 @@ export default function JobBoard() {
                 <button
                   className="btn btn-secondary"
                   style={{ width: '100%', marginTop: '8px' }}
-                  onClick={() => setActiveJob(job)}
-                  disabled={isApplied}
+                  onClick={() => {
+                    if (job.external_link) {
+                      window.open(job.external_link, '_blank');
+                    } else {
+                      setActiveJob(job);
+                    }
+                  }}
+                  disabled={isApplied && !job.external_link}
                 >
-                  {isApplied ? 'Applied' : 'View Details'}
+                  {job.external_link ? 'Apply Externally ↗' : (isApplied ? 'Applied' : 'View Details')}
                 </button>
               </motion.div>
             );
@@ -517,14 +536,24 @@ export default function JobBoard() {
               </div>
             </div>
 
-            <button
-              className="btn btn-primary btn-lg"
-              style={{ width: '100%' }}
-              onClick={() => handleApply(activeJob.id)}
-              disabled={applying || appliedJobs.has(activeJob.id)}
-            >
-              {applying ? 'Applying...' : appliedJobs.has(activeJob.id) ? 'Already Applied' : 'Apply Now with Resume'}
-            </button>
+            {activeJob.external_link ? (
+              <button
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%' }}
+                onClick={() => window.open(activeJob.external_link, '_blank')}
+              >
+                Apply Externally on LinkedIn/Indeed
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%' }}
+                onClick={() => handleApply(activeJob.id)}
+                disabled={applying || appliedJobs.has(activeJob.id)}
+              >
+                {applying ? 'Applying...' : appliedJobs.has(activeJob.id) ? 'Already Applied' : 'Apply Now with Resume'}
+              </button>
+            )}
           </motion.div>
         </div>
       )}
