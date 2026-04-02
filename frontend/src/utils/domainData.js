@@ -53,7 +53,8 @@ export const domainMappings = {
       { id: 'backend_developer', name: 'Backend Developer', icon: '⚙️', suggestedSkills: ['Python', 'Node.js', 'SQL', 'PostgreSQL', 'Docker', 'AWS', 'Redis', 'GraphQL'] },
       { id: 'full_stack_developer', name: 'Full Stack Developer', icon: '🔧', suggestedSkills: ['React', 'Node.js', 'SQL', 'MongoDB', 'Docker', 'TypeScript', 'AWS', 'Express'] },
       { id: 'data_scientist', name: 'Data Scientist', icon: '📊', suggestedSkills: ['Python', 'SQL', 'Pandas', 'Machine Learning', 'TensorFlow', 'PyTorch', 'Tableau', 'Statistics'] },
-      { id: 'devops_engineer', name: 'DevOps Engineer', icon: '☁️', suggestedSkills: ['Linux', 'Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Terraform', 'Ansible', 'GitOps'] }
+      { id: 'devops_engineer', name: 'DevOps Engineer', icon: '☁️', suggestedSkills: ['Linux', 'Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Terraform', 'Ansible', 'GitOps'] },
+      { id: 'gate_preparation', name: 'GATE Preparation (CS/IT)', icon: '🎓', suggestedSkills: ['Data Structures & Algorithms', 'Operating Systems', 'DBMS', 'Computer Networks', 'Theory of Computation', 'Compiler Design', 'Digital Logic', 'Discrete Mathematics', 'Engineering Mathematics', 'Computer Architecture'] }
     ]
   },
   "Mechanical Engineering": {
@@ -77,7 +78,8 @@ export const domainMappings = {
       { id: 'manufacturing_engineer', name: 'Manufacturing Engineer', icon: '🏭', suggestedSkills: ['Lean Six Sigma', 'CAM', 'PLC', 'Root Cause Analysis', 'Quality Control', 'Six Sigma'] },
       { id: 'robotics_engineer', name: 'Robotics Engineer', icon: '🤖', suggestedSkills: ['ROS', 'Python', 'C++', 'Kinematics', 'Control Systems', 'Computer Vision', 'Mechatronics'] },
       { id: 'thermal_engineer', name: 'Thermal Engineer', icon: '🔥', suggestedSkills: ['Thermodynamics', 'Heat Transfer', 'ANSYS Fluent', 'CFD', 'HVAC Design', 'Fluid Mechanics'] },
-      { id: 'automotive_engineer', name: 'Automotive Engineer', icon: '🏎️', suggestedSkills: ['Vehicle Dynamics', 'CAD', 'Catia', 'EV Systems', 'Battery Design', 'FEA'] }
+      { id: 'automotive_engineer', name: 'Automotive Engineer', icon: '🏎️', suggestedSkills: ['Vehicle Dynamics', 'CAD', 'Catia', 'EV Systems', 'Battery Design', 'FEA'] },
+      { id: 'gate_preparation', name: 'GATE Preparation (ME)', icon: '🎓', suggestedSkills: ['Engineering Mathematics', 'Strength of Materials', 'Thermodynamics', 'Fluid Mechanics', 'Heat Transfer', 'Theory of Machines', 'Machine Design', 'Manufacturing Engineering', 'Industrial Engineering', 'Engineering Mechanics'] }
     ]
   },
   "Electrical & Electronics (EEE)": {
@@ -101,7 +103,8 @@ export const domainMappings = {
       { id: 'control_engineer', name: 'Control Systems Engineer', icon: '🎛️', suggestedSkills: ['PLC', 'SCADA', 'DCS', 'PID Control', 'MATLAB/Simulink', 'Automation', 'Sensors'] },
       { id: 'renewable_engineer', name: 'Renewable Energy Engineer', icon: '☀️', suggestedSkills: ['Solar PV', 'Wind Turbines', 'Grid Integration', 'Energy Storage', 'Power Electronics', 'Homer'] },
       { id: 'embedded_engineer', name: 'Embedded Systems Engineer', icon: '🔌', suggestedSkills: ['C/C++', 'Microcontrollers', 'RTOS', 'ARM', 'I2C/SPI', 'PCB Design', 'Firmware'] },
-      { id: 'electrical_designer', name: 'Electrical Design Engineer', icon: '📐', suggestedSkills: ['AutoCAD Electrical', 'ETAP', 'Revit MEP', 'Dialux', 'Lighting Design', 'Panel Design'] }
+      { id: 'electrical_designer', name: 'Electrical Design Engineer', icon: '📐', suggestedSkills: ['AutoCAD Electrical', 'ETAP', 'Revit MEP', 'Dialux', 'Lighting Design', 'Panel Design'] },
+      { id: 'gate_preparation', name: 'GATE Preparation (EE)', icon: '🎓', suggestedSkills: ['Engineering Mathematics', 'Electric Circuits', 'Electromagnetic Fields', 'Signals & Systems', 'Electrical Machines', 'Power Systems', 'Control Systems', 'Power Electronics', 'Analog & Digital Electronics', 'Measurements'] }
     ]
   },
   "ECE (Electronics & Communication)": {
@@ -125,7 +128,8 @@ export const domainMappings = {
       { id: 'vlsi_engineer', name: 'VLSI Design Engineer', icon: '🔬', suggestedSkills: ['Verilog', 'VHDL', 'ASIC Flow', 'FPGA Prototyping', 'SystemVerilog', 'Static Timing Analysis(STA)', 'Cadence'] },
       { id: 'hardware_engineer', name: 'Hardware Design Engineer', icon: '🔌', suggestedSkills: ['PCB Design', 'Altium Designer', 'KiCad', 'Schematic Capture', 'Signal Integrity', 'Mixed Signal'] },
       { id: 'telecom_engineer', name: 'Telecom / RF Engineer', icon: '📡', suggestedSkills: ['5G / LTE', 'RF Design', 'Antenna Design', 'Wireless Comms', 'MATLAB', 'Network Optimization', 'Microwave Engineering'] },
-      { id: 'dsp_engineer', name: 'DSP Engineer', icon: '📻', suggestedSkills: ['MATLAB', 'C/C++', 'Digital Filters', 'Signal Processing Algorithms', 'Audio/Video Processing', 'Simulink', 'FPGA'] }
+      { id: 'dsp_engineer', name: 'DSP Engineer', icon: '📻', suggestedSkills: ['MATLAB', 'C/C++', 'Digital Filters', 'Signal Processing Algorithms', 'Audio/Video Processing', 'Simulink', 'FPGA'] },
+      { id: 'gate_preparation', name: 'GATE Preparation (ECE)', icon: '🎓', suggestedSkills: ['Engineering Mathematics', 'Network Theory', 'Signals & Systems', 'Electronic Devices', 'Analog Circuits', 'Digital Circuits', 'Control Systems', 'Communications', 'Electromagnetics', 'Computer Organization'] }
     ]
   },
   "Civil Engineering": {
@@ -149,7 +153,8 @@ export const domainMappings = {
       { id: 'bim_engineer', name: 'BIM Engineer', icon: '🏢', suggestedSkills: ['Revit', 'Navisworks', 'BIM 360', 'Clash Detection', 'AutoCAD 3D', 'Dynamo', 'Project Management'] },
       { id: 'construction_manager', name: 'Construction Manager', icon: '👷', suggestedSkills: ['Primavera P6', 'MS Project', 'Cost Estimation', 'Contract Management', 'Site Supervision', 'Quality Control'] },
       { id: 'geotechnical_engineer', name: 'Geotechnical Engineer', icon: '🌍', suggestedSkills: ['Soil Mechanics', 'Foundation Design', 'GeoStudio', 'PLAXIS', 'Site Investigation', 'Retaining Walls'] },
-      { id: 'transportation_engineer', name: 'Transportation Engineer', icon: '🛣️', suggestedSkills: ['Civil 3D', 'Highway Design', 'Traffic Engineering', 'VISSIM', 'Pavement Design', 'Synchro'] }
+      { id: 'transportation_engineer', name: 'Transportation Engineer', icon: '🛣️', suggestedSkills: ['Civil 3D', 'Highway Design', 'Traffic Engineering', 'VISSIM', 'Pavement Design', 'Synchro'] },
+      { id: 'gate_preparation', name: 'GATE Preparation (CE)', icon: '🎓', suggestedSkills: ['Engineering Mathematics', 'Structural Analysis', 'Geotechnical Engineering', 'Fluid Mechanics & Hydraulics', 'Environmental Engineering', 'Transportation Engineering', 'Surveying', 'Construction Materials', 'RCC Design', 'Engineering Mechanics'] }
     ]
   }
 };

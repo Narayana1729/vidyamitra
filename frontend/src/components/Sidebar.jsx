@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Brain, Map, Mic, Sparkles,
-  Briefcase, ClipboardList, LogOut, ArrowRightLeft,
+  Briefcase, ClipboardList, LogOut, ArrowRightLeft, GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/resume', icon: FileText, label: 'Resume Analyzer' },
   { to: '/skills', icon: Brain, label: 'Skill Gap' },
   { to: '/roadmap', icon: Map, label: 'Learning Roadmap' },
+  { to: '/gate-prep', icon: GraduationCap, label: 'GATE Prep' },
   { to: '/interview', icon: Mic, label: 'Mock Interview' },
   { to: '/jobs', icon: Briefcase, label: 'Browse Jobs' },
   { to: '/applications', icon: ClipboardList, label: 'My Applications' },

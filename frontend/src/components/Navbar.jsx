@@ -7,6 +7,7 @@ const pageTitles = {
     '/resume': 'AI Resume Analyzer',
     '/skills': 'Skill Gap Detection',
     '/roadmap': 'Learning Roadmap',
+    '/gate-prep': 'GATE Preparation',
     '/interview': 'Mock Interview',
 };
 
