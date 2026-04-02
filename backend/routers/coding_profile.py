@@ -22,6 +22,12 @@ class ProfileRequest(BaseModel):
     github: Optional[str] = Field(None, description="GitHub username")
     hackerrank: Optional[str] = Field(None, description="HackerRank username")
 
+class HandlesRequest(BaseModel):
+    leetcode: Optional[str] = ""
+    codeforces: Optional[str] = ""
+    github: Optional[str] = ""
+    hackerrank: Optional[str] = ""
+
 
 @router.post("/fetch")
 async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_user)):
@@ -38,7 +44,7 @@ async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_use
 
     # Cache to Supabase
     try:
-        user_id = user.get("id") or user.get("user_id")
+        user_id = str(user.id) if hasattr(user, "id") else None
         if user_id and supabase:
             cache_data = {
                 "user_id": user_id,
@@ -66,7 +72,7 @@ async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_use
 async def get_cached_profile(user=Depends(get_current_user)):
     """Return the most recently cached coding profile for this user."""
     try:
-        user_id = user.get("id") or user.get("user_id")
+        user_id = str(user.id) if hasattr(user, "id") else None
         if not user_id or not supabase:
             return {"cached": False, "message": "No cached profile available."}
 
@@ -95,3 +101,34 @@ async def get_cached_profile(user=Depends(get_current_user)):
         return {"cached": False, "message": "No cached profile. Use /fetch to build one."}
     except Exception as e:
         return {"cached": False, "message": f"Cache lookup failed: {str(e)}"}
+
+
+@router.post("/save-handles")
+async def save_handles(req: HandlesRequest, user=Depends(get_current_user)):
+    """Auto-save coding handles to Supabase without fetching profiles."""
+    try:
+        user_id = str(user.id) if hasattr(user, "id") else None
+        if not user_id or not supabase:
+            return {"success": False}
+
+        update_data = {
+            "user_id": user_id,
+            "leetcode_username": req.leetcode or "",
+            "codeforces_username": req.codeforces or "",
+            "github_username": req.github or "",
+            "hackerrank_username": req.hackerrank or "",
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        # Check if row exists
+        existing = supabase.table("coding_profiles").select("id").eq("user_id", user_id).execute()
+
+        if existing.data:
+            supabase.table("coding_profiles").update(update_data).eq("user_id", user_id).execute()
+        else:
+            supabase.table("coding_profiles").insert(update_data).execute()
+
+        return {"success": True}
+    except Exception as e:
+        print(f"[CodingProfile] Handles save failed: {e}")
+        return {"success": False, "error": str(e)}
