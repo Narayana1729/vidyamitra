@@ -247,6 +247,21 @@ export default function CodingProfile() {
   const [loading, setLoading] = useState(false);
   const [loadingCached, setLoadingCached] = useState(true);
 
+  // Auto-save to Supabase when usernames change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (Object.values(usernames).some(v => v.trim() !== '')) {
+        const token = localStorage.getItem('vm_token');
+        if (token) {
+          axios.post(`${API}/api/coding-profile/save-handles`, usernames, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).catch(console.error);
+        }
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [usernames]);
+
   // Load cached profile on mount
   useEffect(() => {
     (async () => {
