@@ -1,6 +1,8 @@
 import os
 import json
 import time
+import hashlib
+from diskcache import Cache
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -13,6 +15,10 @@ client = OpenAI(
 
 # Use the same model as roadmap_engine for consistency
 LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+
+# Initialize disk cache (persists in backend/.api_cache)
+cache_dir = os.path.join(os.path.dirname(__file__), '..', '.api_cache')
+llm_cache = Cache(cache_dir)
 
 
 def _extract_json(content: str) -> dict:
@@ -53,6 +59,13 @@ def call_llm_json(prompt: str, model: str = None, fallback: dict = None, max_ret
     if model is None:
         model = LLM_MODEL
 
+    cache_key = f"json_{model}_{hashlib.md5(prompt.encode()).hexdigest()}"
+    if cache_key in llm_cache:
+        print("[LLM JSON] Cache HIT")
+        return llm_cache[cache_key]
+
+    print("[LLM JSON] Cache MISS. Calling LLM API...")
+
     for attempt in range(max_retries):
         try:
             res = client.chat.completions.create(
@@ -72,7 +85,9 @@ def call_llm_json(prompt: str, model: str = None, fallback: dict = None, max_ret
                 max_tokens=2048,
             )
             content = res.choices[0].message.content.strip()
-            return _extract_json(content)
+            parsed_json = _extract_json(content)
+            llm_cache.set(cache_key, parsed_json, expire=86400)
+            return parsed_json
 
         except Exception as e:
             print(f"[LLM JSON] Attempt {attempt + 1}/{max_retries} failed: {e}")
@@ -88,6 +103,13 @@ def call_llm_text(prompt: str, model: str = None, fallback: str = "") -> str:
     if model is None:
         model = LLM_MODEL
 
+    cache_key = f"text_{model}_{hashlib.md5(prompt.encode()).hexdigest()}"
+    if cache_key in llm_cache:
+        print("[LLM Text] Cache HIT")
+        return llm_cache[cache_key]
+
+    print("[LLM Text] Cache MISS. Calling LLM API...")
+
     try:
         res = client.chat.completions.create(
             model=model,
@@ -95,7 +117,9 @@ def call_llm_text(prompt: str, model: str = None, fallback: str = "") -> str:
             temperature=0.4,
             max_tokens=512,
         )
-        return res.choices[0].message.content.strip()
+        content = res.choices[0].message.content.strip()
+        llm_cache.set(cache_key, content, expire=86400)
+        return content
     except Exception as e:
         print(f"[LLM Text Error] {e}")
         return fallback

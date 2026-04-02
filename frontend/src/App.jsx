@@ -17,6 +17,7 @@ import JobBoard from './pages/JobBoard';
 import MyApplications from './pages/MyApplications';
 import DomainSwitch from './pages/DomainSwitch';
 import CodingProfile from './pages/CodingProfile';
+import MentorixChat from './components/MentorixChat';
 
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import PostJob from './pages/company/PostJob';
@@ -117,6 +118,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AppRoutes />
+          <MentorixChat />
         </BrowserRouter>
       </AuthProvider>
     </ThemeContext.Provider>
