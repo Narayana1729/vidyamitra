@@ -23,6 +23,7 @@ from routers import (
     ml_router,
     coding_profile,
     daily_plan,
+    chatbot,
 )
 
 app = FastAPI(
@@ -81,6 +82,9 @@ app.include_router(coding_profile.router, prefix="/api/coding-profile", tags=["C
 
 # ================= SMART DAILY PLAN =================
 app.include_router(daily_plan.router, prefix="/api/daily-plan", tags=["Daily Plan"])
+
+# ================= MENTORIX CHATBOT =================
+app.include_router(chatbot.router, prefix="/api/chatbot", tags=["Chatbot"])
 
 # ================= ROOT =================
 @app.get("/")
