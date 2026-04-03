@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   GraduationCap, BookOpen, Clock, ChevronDown, ChevronUp, Map, FileText,
@@ -225,6 +225,26 @@ const StudyRoadmap = ({ subjects, uid }) => {
   const [isCustomOrderMode, setIsCustomOrderMode] = useState(false);
   const [isTimetableView, setIsTimetableView] = useState(false);
   const [expandedPlanners, setExpandedPlanners] = useState({});
+  const [swapSource, setSwapSource] = useState(null);
+  const [selectedDayResource, setSelectedDayResource] = useState(null);
+
+  const performSwap = (phaseId, idx1, idx2, currentSchedule) => {
+      const newSchedule = [...currentSchedule];
+      const temp = newSchedule[idx1];
+      newSchedule[idx1] = newSchedule[idx2];
+      newSchedule[idx2] = temp;
+      const newOrder = newSchedule.map(item => item.id);
+      const newPrefs = {
+          ...prefs,
+          customPhaseOrders: {
+              ...(prefs.customPhaseOrders || {}),
+              [phaseId]: newOrder
+          }
+      };
+      setPrefs(newPrefs);
+      localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(newPrefs));
+      setSwapSource(null);
+  };
 
   const handleTopicDayChange = (subId, topic, currentVal, delta) => {
     const newVal = Math.max(1, currentVal + delta);
@@ -262,6 +282,64 @@ const StudyRoadmap = ({ subjects, uid }) => {
         [subId]: isFull ? [] : [...topics]
       }
     }));
+  };
+
+  const renderResourceModal = () => {
+    if (!selectedDayResource) return null;
+    const { sub, topic, globalIdx, id } = selectedDayResource;
+
+    return (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', 
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}
+        onClick={() => setSelectedDayResource(null)}>
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+          className="glass-card" style={{ width: '100%', maxWidth: 500, padding: 24, position: 'relative' }}
+          onClick={e => e.stopPropagation()}>
+          <button onClick={() => setSelectedDayResource(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+             <XCircle size={24} />
+          </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+             <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-sm)', background: `color-mix(in srgb, ${sub.color} 15%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                {sub.icon}
+             </div>
+             <div>
+               <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Day {globalIdx + 1}: {topic}</h3>
+               <div style={{ fontSize: 13, color: sub.color, fontWeight: 600 }}>{sub.name}</div>
+             </div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+             <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
+                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><Youtube size={16} color="var(--rose)" /> Video Lectures</h4>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Search for top explanations on this specific topic:</p>
+                <a href={`https://www.youtube.com/results?search_query=GATE+${encodeURIComponent(sub.name)}+${encodeURIComponent(topic)}`} target="_blank" rel="noreferrer"
+                   className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
+                   <Play size={14} /> Watch {topic} Lectures
+                </a>
+             </div>
+             
+             {sub.books && sub.books.length > 0 && (
+                 <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><BookMarked size={16} color="var(--amber)" /> Recommended Reading</h4>
+                    {sub.books.map((b, i) => (
+                       <div key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>• <strong>{b.name}</strong> by {b.author}</div>
+                    ))}
+                 </div>
+             )}
+             
+             <button className="btn btn-primary" style={{ width: '100%', background: 'var(--emerald)', border: 'none', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12 }}
+                onClick={() => {
+                   setStruckOutDays(prev => ({ ...prev, [id]: true }));
+                   setSelectedDayResource(null);
+                   setTimeout(() => toggleTopic(sub.id, topic, true), 500);
+                }}>
+                <CheckCircle2 size={18} /> Mark Topic as Completed
+             </button>
+          </div>
+        </motion.div>
+      </div>
+    );
   };
 
   if (isQuestionnaire) {
@@ -508,12 +586,16 @@ const StudyRoadmap = ({ subjects, uid }) => {
                  // Interleave queue
                  const interleavedSchedule = [];
                  const queueProps = [...topicsQueue];
+                 const counters = {};
                  
                  let idx = 0;
                  while (queueProps.length > 0) {
                      if (idx >= queueProps.length) idx = 0;
                      const curr = queueProps[idx];
-                     interleavedSchedule.push({ sub: curr.sub, topic: curr.topic });
+                     const key = `${curr.sub.id}_${curr.topic}`;
+                     counters[key] = (counters[key] || 0) + 1;
+                     const itemId = `${key}_${counters[key]}`;
+                     interleavedSchedule.push({ sub: curr.sub, topic: curr.topic, id: itemId });
                      curr.partsRemaining--;
                      if (curr.partsRemaining <= 0) {
                          queueProps.splice(idx, 1);
@@ -521,33 +603,90 @@ const StudyRoadmap = ({ subjects, uid }) => {
                          idx++;
                      }
                  }
+
+                 let finalSchedule = interleavedSchedule;
+                 const customOrder = prefs.customPhaseOrders?.[phase.id];
+                 if (customOrder) {
+                    finalSchedule = [...interleavedSchedule].sort((a, b) => {
+                        const idxA = customOrder.indexOf(a.id);
+                        const idxB = customOrder.indexOf(b.id);
+                        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                        if (idxA !== -1) return -1;
+                        if (idxB !== -1) return 1;
+                        return 0;
+                    });
+                 }
                  
                  // Chunk into 7-day weeks
                  const weeks = [];
-                 for (let i = 0; i < interleavedSchedule.length; i += 7) {
-                     weeks.push(interleavedSchedule.slice(i, i + 7));
+                 for (let i = 0; i < finalSchedule.length; i += 7) {
+                     weeks.push(finalSchedule.slice(i, i + 7));
                  }
                  
                  return (
                     <div key={phase.id} style={{ marginBottom: 32 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                           <div className="roadmap-dot" style={{ background: phase.color, boxShadow: `0 0 12px ${phase.color}40`, position: 'static' }} />
-                          <h4 style={{ fontSize: 18, fontWeight: 700 }}>{phase.name} — Interleaved Schedule</h4>
+                          <h4 style={{ fontSize: 18, fontWeight: 700 }}>{phase.name} — Daily Plan</h4>
                         </div>
+                        {swapSource?.phaseId === phase.id && (
+                           <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--amber)', color: '#000', borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                             <span>🔄 Select another day in this phase to swap with Day {swapSource.globalIdx + 1} ({swapSource.topic})</span>
+                             <button className="btn btn-sm" style={{ background: 'rgba(0,0,0,0.2)', border: 'none', color: '#000' }} onClick={() => setSwapSource(null)}>Cancel</button>
+                           </div>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
                             {weeks.map((weekDays, wIdx) => (
-                                <div key={wIdx} className="glass-card" style={{ padding: 16, borderTop: `4px solid ${phase.color}40` }}>
+                                <div key={wIdx} className="glass-card" style={{ padding: 16, borderTop: `4px solid ${phase.color}40`, opacity: swapSource?.phaseId === phase.id ? 0.9 : 1 }}>
                                     <h5 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Week {wIdx + 1}</h5>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        {weekDays.map((dayItem, dIdx) => (
-                                            <div key={dIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-secondary)', padding: '6px 8px', borderRadius: 4 }}>
-                                                <span className="badge badge-cyan" style={{ fontSize: 10, minWidth: 42 }}>Day {dIdx + 1}</span>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontSize: 11, fontWeight: 700, color: dayItem.sub.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dayItem.sub.name}</div>
-                                                    <div style={{ fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dayItem.topic}</div>
+                                        {weekDays.map((dayItem, localIdx) => {
+                                            const globalIdx = wIdx * 7 + localIdx;
+                                            const isSwapSource = swapSource?.phaseId === phase.id && swapSource?.globalIdx === globalIdx;
+                                            const isAnotherSwapTarget = swapSource?.phaseId === phase.id && !isSwapSource;
+                                            const isStruckOut = struckOutDays[dayItem.id];
+                                            
+                                            return (
+                                                <div key={localIdx} style={{ 
+                                                    display: 'flex', alignItems: 'center', gap: 10, 
+                                                    background: isSwapSource ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-secondary)', 
+                                                    border: isSwapSource ? '1px solid var(--amber)' : (isAnotherSwapTarget ? '1px dashed var(--amber)' : '1px solid transparent'),
+                                                    padding: '6px 8px', borderRadius: 6, transition: 'all 0.2s', cursor: 'pointer',
+                                                    opacity: isStruckOut ? 0.4 : 1, textDecoration: isStruckOut ? 'line-through' : 'none'
+                                                }} onClick={() => {
+                                                    if (isAnotherSwapTarget) {
+                                                       performSwap(phase.id, swapSource.globalIdx, globalIdx, finalSchedule);
+                                                    } else if (!swapSource) {
+                                                       setSelectedDayResource({ id: dayItem.id, sub: dayItem.sub, topic: dayItem.topic, globalIdx });
+                                                    }
+                                                }}>
+                                                    {!swapSource && (
+                                                        <button className="btn btn-ghost" style={{ padding: 3, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isStruckOut ? 'var(--emerald)' : 'var(--text-muted)' }}
+                                                           onClick={e => {
+                                                               e.stopPropagation();
+                                                               setStruckOutDays(prev => ({ ...prev, [dayItem.id]: true }));
+                                                               setTimeout(() => toggleTopic(dayItem.sub.id, dayItem.topic, true), 500);
+                                                           }} title="Mark Completed">
+                                                           {isStruckOut ? <CheckCircle2 size={16} /> : <Check size={16} />}
+                                                        </button>
+                                                    )}
+                                                    <span className="badge badge-cyan" style={{ fontSize: 10, minWidth: 42, background: isSwapSource ? 'var(--amber)' : undefined, color: isSwapSource ? '#000' : undefined }}>Day {globalIdx + 1}</span>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: isSwapSource ? 'var(--text-primary)' : dayItem.sub.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dayItem.sub.name}</div>
+                                                        <div style={{ fontSize: 11, color: isSwapSource ? 'var(--amber)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dayItem.topic}</div>
+                                                    </div>
+                                                    {isAnotherSwapTarget && (
+                                                        <span style={{ fontSize: 16 }}>🔄</span>
+                                                    )}
+                                                    {!swapSource && (
+                                                        <button className="btn btn-ghost btn-sm" style={{ padding: '4px', height: 'auto', minHeight: 0 }} title="Change Topic"
+                                                          onClick={(e) => { e.stopPropagation(); setSwapSource({ phaseId: phase.id, globalIdx, topic: dayItem.topic }); }}>
+                                                            <RotateCcw size={14} style={{ color: 'var(--text-muted)' }} />
+                                                        </button>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
@@ -726,6 +865,9 @@ const StudyRoadmap = ({ subjects, uid }) => {
           });
         })()}
       </div>
+      <AnimatePresence>
+        {selectedDayResource && renderResourceModal()}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -945,7 +1087,7 @@ const PerformanceView = ({ uid, subjects }) => {
     if (!subjectMap[h.subjectId]) subjectMap[h.subjectId] = { scores: [], name: h.subject };
     subjectMap[h.subjectId].scores.push(h.pct);
   });
-  const subjectAvg = Object.entries(subjectMap).map(([id, data]) => ({
+  const subjectAvg = Object.values(subjectMap).map((data) => ({
     subject: data.name.length > 15 ? data.name.substring(0, 15) + '...' : data.name,
     avg: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
     attempts: data.scores.length,
