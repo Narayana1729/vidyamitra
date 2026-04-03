@@ -18,6 +18,7 @@ import JobBoard from './pages/JobBoard';
 import MyApplications from './pages/MyApplications';
 import DomainSwitch from './pages/DomainSwitch';
 import CodingProfile from './pages/CodingProfile';
+import AIInsights from './pages/AIInsights';
 import MentorixChat from './components/MentorixChat';
 
 import CompanyDashboard from './pages/company/CompanyDashboard';
@@ -47,6 +48,7 @@ function StudentLayout() {
           <Route path="/applications" element={<ProtectedRoute requiredRole="student"><MyApplications /></ProtectedRoute>} />
           <Route path="/domain-switch" element={<ProtectedRoute requiredRole="student"><DomainSwitch /></ProtectedRoute>} />
           <Route path="/coding-profile" element={<ProtectedRoute requiredRole="student"><CodingProfile /></ProtectedRoute>} />
+          <Route path="/ai-insights" element={<ProtectedRoute requiredRole="student"><AIInsights /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -101,6 +103,21 @@ function AppRoutes() {
   );
 }
 
+/* ──── Chatbot Wrapper ──── */
+function ChatWrapper() {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) return null;
+
+  // Hide on Interview and Higher Studies pages to prevent clashing with quizzes/interviews
+  if (location.pathname.startsWith('/interview') || location.pathname.startsWith('/higher-studies')) {
+    return null;
+  }
+
+  return <MentorixChat />;
+}
+
 export default function App() {
   const [theme, setTheme] = useState(
     localStorage.getItem('theme') || 'dark'
@@ -120,7 +137,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AppRoutes />
-          <MentorixChat />
+          <ChatWrapper />
         </BrowserRouter>
       </AuthProvider>
     </ThemeContext.Provider>

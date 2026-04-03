@@ -44,8 +44,19 @@ def _fetch_student_context(user_id: str) -> dict:
         sk = supabase.table("skill_analyses").select("match_percentage, missing_skills, matched_skills").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
         if sk.data:
             context["skill_match"] = sk.data[0].get("match_percentage", 0)
-            context["weak_areas"] = sk.data[0].get("missing_skills", [])[:5] if isinstance(sk.data[0].get("missing_skills"), list) else []
-            context["skills"] = sk.data[0].get("matched_skills", [])[:10] if isinstance(sk.data[0].get("matched_skills"), list) else []
+            
+            def _clean_skills(items):
+                if not isinstance(items, list): return []
+                res = []
+                for i in items:
+                    if isinstance(i, dict):
+                        res.append(i.get("name", i.get("skill", str(i))))
+                    else:
+                        res.append(str(i))
+                return res
+
+            context["weak_areas"] = _clean_skills(sk.data[0].get("missing_skills", []))[:5]
+            context["skills"] = _clean_skills(sk.data[0].get("matched_skills", []))[:10]
 
         # Latest interview score
         sessions = supabase.table("interview_sessions").select("session_id").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()

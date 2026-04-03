@@ -16,6 +16,11 @@ import { GATE_EXAM_INFO, GATE_PLATFORMS, GATE_BRANCHES, STUDY_PHASES as GATE_STU
 import { UPSC_EXAM_INFO, UPSC_PLATFORMS, UPSC_BRANCHES, UPSC_STUDY_PHASES } from '../utils/upscData';
 import { CAT_EXAM_INFO, CAT_BRANCHES, CAT_STUDY_PHASES } from '../utils/mbaData';
 import { MASTERS_EXAM_INFO, MASTERS_BRANCHES, MASTERS_STUDY_PHASES } from '../utils/mastersData';
+import { BANKING_EXAM_INFO, BANKING_PLATFORMS, BANKING_BRANCHES, BANKING_STUDY_PHASES } from '../utils/bankingData';
+import { RAILWAYS_EXAM_INFO, RAILWAYS_PLATFORMS, RAILWAYS_BRANCHES, RAILWAYS_STUDY_PHASES } from '../utils/railwaysData';
+import { GROUPS_EXAM_INFO, GROUPS_PLATFORMS, GROUPS_BRANCHES, GROUPS_STUDY_PHASES } from '../utils/groupsData';
+import { NEET_EXAM_INFO, NEET_PLATFORMS, NEET_BRANCHES, NEET_STUDY_PHASES } from '../utils/neetData';
+import { ABROAD_EXAM_INFO, ABROAD_PLATFORMS, ABROAD_BRANCHES, ABROAD_STUDY_PHASES } from '../utils/abroadData';
 const TABS = [
   { id: 'overview', label: 'Exam Overview', icon: Info },
   { id: 'subjects', label: 'Subjects & Syllabus', icon: BookOpen },
@@ -1407,6 +1412,11 @@ export default function HigherStudies() {
        case 'UPSC': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={UPSC_EXAM_INFO} platforms={UPSC_PLATFORMS} branches={UPSC_BRANCHES} studyPhases={UPSC_STUDY_PHASES} storagePrefix="upsc" />;
        case 'MBA': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={CAT_EXAM_INFO} platforms={[]} branches={CAT_BRANCHES} studyPhases={CAT_STUDY_PHASES} storagePrefix="mba" />;
        case 'MASTERS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={MASTERS_EXAM_INFO} platforms={[]} branches={MASTERS_BRANCHES} studyPhases={MASTERS_STUDY_PHASES} storagePrefix="masters" />;
+       case 'BANKING': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={BANKING_EXAM_INFO} platforms={BANKING_PLATFORMS} branches={BANKING_BRANCHES} studyPhases={BANKING_STUDY_PHASES} storagePrefix="banking" />;
+       case 'RAILWAYS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={RAILWAYS_EXAM_INFO} platforms={RAILWAYS_PLATFORMS} branches={RAILWAYS_BRANCHES} studyPhases={RAILWAYS_STUDY_PHASES} storagePrefix="railways" />;
+       case 'GROUPS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={GROUPS_EXAM_INFO} platforms={GROUPS_PLATFORMS} branches={GROUPS_BRANCHES} studyPhases={GROUPS_STUDY_PHASES} storagePrefix="groups" />;
+       case 'NEET': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={NEET_EXAM_INFO} platforms={NEET_PLATFORMS} branches={NEET_BRANCHES} studyPhases={NEET_STUDY_PHASES} storagePrefix="neet" />;
+       case 'ABROAD': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={ABROAD_EXAM_INFO} platforms={ABROAD_PLATFORMS} branches={ABROAD_BRANCHES} studyPhases={ABROAD_STUDY_PHASES} storagePrefix="abroad" />;
        case null: return null;
        default: return (
            <div style={{ padding: 60, textAlign: 'center' }}>

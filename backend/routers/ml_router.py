@@ -110,7 +110,19 @@ async def predict_placement(req: PlacementRequest, user=Depends(get_current_user
         features = _load_model("placement_features.pkl")
 
         data = req.model_dump()
-        data["branch_encoded"] = int(le.transform([data.pop("branch")])[0])
+        
+        # Safely map comprehensive frontend domains to precise ML dataset labels
+        domain_mapping = {
+            "Software Engineering / CS / IT": "CSE",
+            "ECE (Electronics & Communication)": "ECE",
+            "Electrical & Electronics (EEE)": "EEE",
+            "Mechanical Engineering": "Mechanical",
+            "Civil Engineering": "Civil"
+        }
+        raw_branch = data.pop("branch")
+        ml_branch = domain_mapping.get(raw_branch, "CSE") # Fallback cleanly
+        
+        data["branch_encoded"] = int(le.transform([ml_branch])[0])
 
         X = pd.DataFrame([data])[features]
         X_s = scaler.transform(X)
@@ -160,9 +172,9 @@ async def predict_archetype(req: ArchetypeRequest, user=Depends(get_current_user
         cluster_id = int(model.predict(X_s)[0])
         distances = model.transform(X_s)[0]
 
-        min_d = distances[cluster_id]
-        avg_d = distances.mean()
-        confidence = round(max(0, (1 - min_d / (min_d + avg_d)) * 100), 1)
+        min_d = float(distances[cluster_id])
+        avg_d = float(distances.mean())
+        confidence = float(round(max(0, (1 - min_d / (min_d + avg_d)) * 100), 1))
 
         archetype = archetypes[cluster_id]
 
@@ -194,12 +206,12 @@ async def predict_role(req: RoleRequest, user=Depends(get_current_user)):
         top3 = sorted(zip(roles, probs), key=lambda x: x[1], reverse=True)[:3]
 
         return {
-            "best_match": top3[0][0],
+            "best_match": str(top3[0][0]),
             "confidence": round(float(top3[0][1]) * 100, 1),
             "top_matches": [
-                {"role": r, "score": round(float(p) * 100, 1)} for r, p in top3
+                {"role": str(r), "score": round(float(p) * 100, 1)} for r, p in top3
             ],
-            "message": f"Your skills best match a {top3[0][0]} role ({round(top3[0][1] * 100, 1)}% confidence)."
+            "message": f"Your skills best match a {str(top3[0][0])} role ({round(float(top3[0][1]) * 100, 1)}% confidence)."
         }
     except HTTPException:
         raise
@@ -226,3 +238,60 @@ async def predict_readiness_timeline(req: TimelineRequest, user=Depends(get_curr
         return predict_timeline(weekly_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Timeline prediction failed: {str(e)}")
+
+
+class SaveInsightsRequest(BaseModel):
+    placement_probability: float
+    verdict: str
+    top_factors: list
+    cluster_id: int
+    archetype: str
+    archetype_emoji: str
+    archetype_description: str
+    best_role: str
+    role_confidence: float
+    skill_health: dict
+    readiness_timeline: list
+
+
+@router.post("/save-insights")
+async def save_insights(req: SaveInsightsRequest, user=Depends(get_current_user)):
+    try:
+        from db.supabase_client import supabase
+        user_id = str(user.id) if hasattr(user, "id") else None
+        if not user_id or not supabase:
+            return {"success": False, "message": "No supabase client"}
+
+        update_data = req.model_dump()
+        update_data["user_id"] = user_id
+
+        # Check existing
+        existing = supabase.table("ai_insights").select("id").eq("user_id", user_id).execute()
+        
+        from datetime import datetime
+        update_data["updated_at"] = datetime.utcnow().isoformat()
+
+        if existing.data:
+            supabase.table("ai_insights").update(update_data).eq("user_id", user_id).execute()
+        else:
+            supabase.table("ai_insights").insert(update_data).execute()
+
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save insights: {str(e)}")
+
+
+@router.get("/cached-insights")
+async def get_cached_insights(user=Depends(get_current_user)):
+    try:
+        from db.supabase_client import supabase
+        user_id = str(user.id) if hasattr(user, "id") else None
+        if not user_id or not supabase:
+            return {"cached": False}
+        
+        res = supabase.table("ai_insights").select("*").eq("user_id", user_id).execute()
+        if res.data:
+            return {"cached": True, "data": res.data[0]}
+        return {"cached": False}
+    except Exception as e:
+        return {"cached": False, "error": str(e)}

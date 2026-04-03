@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Brain, Map, Mic, Sparkles,
-  Briefcase, ClipboardList, LogOut, ArrowRightLeft, GraduationCap, Link2,
+  Briefcase, ClipboardList, LogOut, ArrowRightLeft, GraduationCap, Link2, BrainCircuit
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/ai-insights', icon: BrainCircuit, label: 'AI Insights' },
   { to: '/resume', icon: FileText, label: 'Resume Analyzer' },
   { to: '/skills', icon: Brain, label: 'Skill Gap' },
   { to: '/roadmap', icon: Map, label: 'Learning Roadmap' },
