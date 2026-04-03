@@ -5,7 +5,7 @@ Mentorix Chatbot Router
 import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from openai import AsyncOpenAI
 
 router = APIRouter()
@@ -19,6 +19,7 @@ client = AsyncOpenAI(
 class ChatMessage(BaseModel):
     role: str
     content: str
+    image: Optional[str] = None
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
@@ -48,15 +49,30 @@ async def chat_with_mentorix(req: ChatRequest):
         raise HTTPException(status_code=500, detail="OpenAI API key not configured")
 
     try:
+        model_name = "llama-3.1-8b-instant"
+        has_image = False
+        
         # Re-format messages for OpenAI API
         api_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         for msg in req.messages:
-            # ensure only 'user' or 'assistant' roles
             if msg.role in ["user", "assistant"]:
-                api_messages.append({"role": msg.role, "content": msg.content})
+                if msg.role == "user" and msg.image:
+                    has_image = True
+                    content = []
+                    if msg.content:
+                        content.append({"type": "text", "text": msg.content})
+                    else:
+                        content.append({"type": "text", "text": "Please scan this image and provide precise, clear, and understandable information about what it contains in detail, avoiding unwanted information."})
+                    content.append({"type": "image_url", "image_url": {"url": msg.image}})
+                    api_messages.append({"role": msg.role, "content": content})
+                else:
+                    api_messages.append({"role": msg.role, "content": msg.content})
+
+        if has_image:
+            model_name = "llama-3.2-11b-vision-preview"
 
         response = await client.chat.completions.create(
-            model="llama-3.1-8b-instant",  # Fast and cost-effective open-source model via Groq
+            model=model_name,
             messages=api_messages,
             temperature=0.7,
             max_tokens=800
