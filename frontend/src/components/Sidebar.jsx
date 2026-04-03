@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Brain, Map, Mic, Sparkles,
-  Briefcase, ClipboardList, LogOut, ArrowRightLeft, GraduationCap, Link2,
+  Briefcase, ClipboardList, LogOut, ArrowRightLeft, GraduationCap, Link2, Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/applications', icon: ClipboardList, label: 'My Applications' },
   { to: '/domain-switch', icon: ArrowRightLeft, label: 'Domain Switch' },
   { to: '/coding-profile', icon: Link2, label: 'Coding Profile' },
+  { to: '/ai-insights', icon: Zap, label: 'AI Insights' },
 ];
 
 export default function Sidebar() {

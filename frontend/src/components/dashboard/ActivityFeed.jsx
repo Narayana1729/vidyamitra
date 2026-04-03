@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, FileText, Brain, Mic, TrendingUp } from 'lucide-react';
+import { Clock, FileText, Brain, Mic, TrendingUp, Award, Code, Zap } from 'lucide-react';
 import ScoreCircle from '../ScoreCircle';
-import { Award } from 'lucide-react';
 
 const activityIcons = {
   resume: <FileText size={16} />,
   skill: <Brain size={16} />,
   interview: <Mic size={16} />,
   roadmap: <TrendingUp size={16} />,
+  placement_prediction: <Award size={16} />,
+  archetype_prediction: <Zap size={16} />,
+  coding_profile_update: <Code size={16} />,
 };
 
 const activityColors = {
@@ -16,6 +18,9 @@ const activityColors = {
   skill: 'var(--cyan)',
   interview: 'var(--amber)',
   roadmap: 'var(--emerald)',
+  placement_prediction: 'var(--rose)',
+  archetype_prediction: 'var(--amber)',
+  coding_profile_update: 'var(--cyan)',
 };
 
 export default function ActivityFeed({ activity, stats }) {

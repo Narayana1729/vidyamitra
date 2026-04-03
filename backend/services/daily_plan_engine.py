@@ -44,8 +44,17 @@ def _fetch_student_context(user_id: str) -> dict:
         sk = supabase.table("skill_analyses").select("match_percentage, missing_skills, matched_skills").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
         if sk.data:
             context["skill_match"] = sk.data[0].get("match_percentage", 0)
-            context["weak_areas"] = sk.data[0].get("missing_skills", [])[:5] if isinstance(sk.data[0].get("missing_skills"), list) else []
-            context["skills"] = sk.data[0].get("matched_skills", [])[:10] if isinstance(sk.data[0].get("matched_skills"), list) else []
+            
+            def _extract_skill(item):
+                if isinstance(item, str): return item
+                if isinstance(item, dict): return item.get("skill") or item.get("name") or str(item)
+                return str(item)
+                
+            raw_missing = sk.data[0].get("missing_skills", [])
+            context["weak_areas"] = [_extract_skill(x) for x in (raw_missing if isinstance(raw_missing, list) else [])][:5]
+            
+            raw_matched = sk.data[0].get("matched_skills", [])
+            context["skills"] = [_extract_skill(x) for x in (raw_matched if isinstance(raw_matched, list) else [])][:10]
 
         # Latest interview score
         sessions = supabase.table("interview_sessions").select("session_id").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()

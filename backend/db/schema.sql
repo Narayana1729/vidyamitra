@@ -195,3 +195,32 @@ CREATE TABLE IF NOT EXISTS tracked_applications (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 11. AI Insights (ML Predictions)
+CREATE TABLE IF NOT EXISTS ai_insights (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    insight_type TEXT NOT NULL, -- 'placement', 'archetype', 'role', 'health', 'timeline'
+    input_data JSONB DEFAULT '{}',
+    result_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_insights_user ON ai_insights(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_insights_type ON ai_insights(insight_type);
+
+-- 12. Coding Profiles
+CREATE TABLE IF NOT EXISTS coding_profiles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+    leetcode_username TEXT DEFAULT '',
+    codeforces_username TEXT DEFAULT '',
+    github_username TEXT DEFAULT '',
+    hackerrank_username TEXT DEFAULT '',
+    coding_score INTEGER DEFAULT 0,
+    profile_data JSONB DEFAULT '{}',       -- Aggregated API responses
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_coding_profiles_user ON coding_profiles(user_id);

@@ -227,7 +227,19 @@ const StudyRoadmap = ({ subjects, uid }) => {
   const [expandedPlanners, setExpandedPlanners] = useState({});
   const [swapSource, setSwapSource] = useState(null);
   const [selectedDayResource, setSelectedDayResource] = useState(null);
+  const [struckOutDays, setStruckOutDays] = useState({});
 
+  useEffect(() => {
+    if (prefs && !prefs.customOrder && subjects?.length > 0) {
+      const flat = [...subjects].sort((a, b) => {
+        if (a.phase !== b.phase) return a.phase - b.phase;
+        return a.order - b.order;
+      });
+      const newOrder = flat.map(s => s.id);
+      setQAnswers(p => ({ ...p, customOrder: newOrder }));
+      setPrefs(p => ({ ...p, customOrder: newOrder }));
+    }
+  }, [subjects, prefs?.customOrder]);
   const performSwap = (phaseId, idx1, idx2, currentSchedule) => {
       const newSchedule = [...currentSchedule];
       const temp = newSchedule[idx1];
@@ -471,19 +483,6 @@ const StudyRoadmap = ({ subjects, uid }) => {
   }));
 
   const globalCompletionPct = overallTotalTopics > 0 ? Math.round((overallCompletedTopics / overallTotalTopics) * 100) : 0;
-
-  // Initialize customOrder if it's not set
-  useEffect(() => {
-    if (!customOrder && phases.length > 0) {
-      // Flatten subjects by phase order
-      const flat = [...subjects].sort((a, b) => {
-        if (a.phase !== b.phase) return a.phase - b.phase;
-        return a.order - b.order;
-      });
-      setQAnswers(p => ({ ...p, customOrder: flat.map(s => s.id) }));
-      setPrefs(p => ({ ...p, customOrder: flat.map(s => s.id) }));
-    }
-  }, [subjects, phases.length]);
 
   const moveSubject = (idx, direction) => {
     if (!customOrder) return;

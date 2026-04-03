@@ -18,6 +18,7 @@ import JobBoard from './pages/JobBoard';
 import MyApplications from './pages/MyApplications';
 import DomainSwitch from './pages/DomainSwitch';
 import CodingProfile from './pages/CodingProfile';
+import AIInsights from './pages/AIInsights';
 import MentorixChat from './components/MentorixChat';
 
 import CompanyDashboard from './pages/company/CompanyDashboard';
@@ -47,6 +48,7 @@ function StudentLayout() {
           <Route path="/applications" element={<ProtectedRoute requiredRole="student"><MyApplications /></ProtectedRoute>} />
           <Route path="/domain-switch" element={<ProtectedRoute requiredRole="student"><DomainSwitch /></ProtectedRoute>} />
           <Route path="/coding-profile" element={<ProtectedRoute requiredRole="student"><CodingProfile /></ProtectedRoute>} />
+          <Route path="/ai-insights" element={<ProtectedRoute requiredRole="student"><AIInsights /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

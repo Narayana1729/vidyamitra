@@ -6,11 +6,12 @@ Endpoints: placement prediction, career archetype, role classification,
 
 import sys
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from routers.auth import get_current_user
+from utils.db_utils import save_to_supabase
 
 router = APIRouter()
 
@@ -100,14 +101,15 @@ def _load_model(filename: str):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.post("/predict-placement")
-async def predict_placement(req: PlacementRequest, user=Depends(get_current_user)):
+async def predict_placement(req: PlacementRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Predict placement probability using GradientBoosting + SHAP explanations."""
     try:
+        import shap
         model = _load_model("placement_model.pkl")
         scaler = _load_model("placement_scaler.pkl")
         le = _load_model("branch_encoder.pkl")
-        explainer = _load_model("shap_explainer.pkl")
         features = _load_model("placement_features.pkl")
+        explainer = shap.TreeExplainer(model)
 
         data = req.model_dump()
         data["branch_encoded"] = int(le.transform([data.pop("branch")])[0])
@@ -130,15 +132,48 @@ async def predict_placement(req: PlacementRequest, user=Depends(get_current_user
 
         verdict = "High" if prob >= 0.70 else ("Moderate" if prob >= 0.40 else "Low")
 
-        return {
+        positive_factors = [f for f in top_factors if f["impact"] > 0]
+        negative_factors = [f for f in top_factors if f["impact"] < 0]
+
+        msg_factor = ""
+        if top_factors:
+            top = top_factors[0]
+            if top["impact"] > 0:
+                msg_factor = f"Your strongest advantage is {top['feature']}."
+            else:
+                msg_factor = f"Your biggest area for improvement is {top['feature']}."
+
+        result = {
             "placement_probability": round(prob * 100, 1),
             "verdict": verdict,
             "top_factors": top_factors,
-            "message": (
-                f"You have a {round(prob * 100, 1)}% chance of getting placed. "
-                f"Your top factor is {top_factors[0]['feature']}."
-            )
+            "message": f"You have a {round(prob * 100, 1)}% chance of getting placed. {msg_factor}".strip()
         }
+
+        background_tasks.add_task(
+            save_to_supabase,
+            "ai_insights",
+            {
+                "user_id": user.id,
+                "insight_type": "placement",
+                "input_data": req.model_dump(),
+                "result_data": result
+            }
+        )
+
+        # Log activity
+        background_tasks.add_task(
+            save_to_supabase,
+            "activity_log",
+            {
+                "user_id": user.id,
+                "activity_type": "placement_prediction",
+                "action": f"Checked placement readiness: {result['placement_probability']}% ({verdict})",
+                "metadata": {"probability": result["placement_probability"], "verdict": verdict}
+            }
+        )
+
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -146,7 +181,7 @@ async def predict_placement(req: PlacementRequest, user=Depends(get_current_user
 
 
 @router.post("/career-archetype")
-async def predict_archetype(req: ArchetypeRequest, user=Depends(get_current_user)):
+async def predict_archetype(req: ArchetypeRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Classify student into one of 6 career archetypes using KMeans clustering."""
     try:
         model = _load_model("clustering_model.pkl")
@@ -166,7 +201,7 @@ async def predict_archetype(req: ArchetypeRequest, user=Depends(get_current_user
 
         archetype = archetypes[cluster_id]
 
-        return {
+        result = {
             "cluster_id": cluster_id,
             "archetype": archetype["name"],
             "emoji": archetype["emoji"],
@@ -177,6 +212,31 @@ async def predict_archetype(req: ArchetypeRequest, user=Depends(get_current_user
             "color": archetype["color"],
             "message": f"You are a {archetype['emoji']} {archetype['name']} with {confidence}% confidence.",
         }
+
+        background_tasks.add_task(
+            save_to_supabase,
+            "ai_insights",
+            {
+                "user_id": user.id,
+                "insight_type": "archetype",
+                "input_data": req.model_dump(),
+                "result_data": result
+            }
+        )
+
+        # Log activity
+        background_tasks.add_task(
+            save_to_supabase,
+            "activity_log",
+            {
+                "user_id": user.id,
+                "activity_type": "archetype_prediction",
+                "action": f"Discovered career archetype: {archetype['name']} {archetype['emoji']}",
+                "metadata": {"archetype": archetype['name'], "confidence": confidence}
+            }
+        )
+
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -184,7 +244,7 @@ async def predict_archetype(req: ArchetypeRequest, user=Depends(get_current_user
 
 
 @router.post("/predict-role")
-async def predict_role(req: RoleRequest, user=Depends(get_current_user)):
+async def predict_role(req: RoleRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Classify skills text into a best-fit job role using TF-IDF + RandomForest."""
     try:
         model = _load_model("role_classifier.pkl")
@@ -193,7 +253,7 @@ async def predict_role(req: RoleRequest, user=Depends(get_current_user)):
         roles = model.classes_
         top3 = sorted(zip(roles, probs), key=lambda x: x[1], reverse=True)[:3]
 
-        return {
+        result = {
             "best_match": top3[0][0],
             "confidence": round(float(top3[0][1]) * 100, 1),
             "top_matches": [
@@ -201,6 +261,19 @@ async def predict_role(req: RoleRequest, user=Depends(get_current_user)):
             ],
             "message": f"Your skills best match a {top3[0][0]} role ({round(top3[0][1] * 100, 1)}% confidence)."
         }
+
+        background_tasks.add_task(
+            save_to_supabase,
+            "ai_insights",
+            {
+                "user_id": user.id,
+                "insight_type": "role",
+                "input_data": req.model_dump(),
+                "result_data": result
+            }
+        )
+
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -208,21 +281,45 @@ async def predict_role(req: RoleRequest, user=Depends(get_current_user)):
 
 
 @router.post("/skill-health")
-async def analyze_skill_health(req: SkillHealthRequest, user=Depends(get_current_user)):
+async def analyze_skill_health(req: SkillHealthRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Analyze skill portfolio health using market trend data."""
     try:
         from skill_decay import analyze_skill_portfolio
-        return analyze_skill_portfolio(req.skills, req.months_ago)
+        result = analyze_skill_portfolio(req.skills, req.months_ago)
+
+        background_tasks.add_task(
+            save_to_supabase,
+            "ai_insights",
+            {
+                "user_id": user.id,
+                "insight_type": "health",
+                "input_data": {"skills": req.skills},
+                "result_data": result
+            }
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Skill analysis failed: {str(e)}")
 
 
 @router.post("/readiness-timeline")
-async def predict_readiness_timeline(req: TimelineRequest, user=Depends(get_current_user)):
+async def predict_readiness_timeline(req: TimelineRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Predict when student will be placement-ready using linear regression."""
     try:
         from placement_timeline import predict_readiness_timeline as predict_timeline
         weekly_data = [s.model_dump() for s in req.weekly_scores]
-        return predict_timeline(weekly_data)
+        result = predict_timeline(weekly_data)
+
+        background_tasks.add_task(
+            save_to_supabase,
+            "ai_insights",
+            {
+                "user_id": user.id,
+                "insight_type": "timeline",
+                "input_data": {"weekly_scores": weekly_data},
+                "result_data": result
+            }
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Timeline prediction failed: {str(e)}")
