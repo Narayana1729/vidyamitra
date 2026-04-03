@@ -30,9 +30,12 @@ async def get_daily_plan(
     """Get today's AI-generated daily action plan.
     Returns cached plan if already generated today (unless refresh=true).
     """
-    user_id = user.get("id") or user.get("user_id")
-    name = user.get("full_name", user.get("name", "Student"))
-    if isinstance(name, str):
+    user_id = str(user.id) if hasattr(user, "id") else None
+    
+    metadata = getattr(user, "user_metadata", {}) or {}
+    name = metadata.get("full_name", metadata.get("name", "Student")) if metadata else "Student"
+    
+    if isinstance(name, str) and name:
         name = name.split()[0]  # First name only
 
     plan = generate_daily_plan(
@@ -46,7 +49,7 @@ async def get_daily_plan(
 @router.post("/complete-task")
 async def complete_task(req: TaskCompleteRequest, user=Depends(get_current_user)):
     """Mark a specific task as completed in today's plan."""
-    user_id = user.get("id") or user.get("user_id")
+    user_id = str(user.id) if hasattr(user, "id") else None
     result = mark_task_complete(user_id, req.task_id)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("message", "Failed to mark task."))
@@ -56,7 +59,7 @@ async def complete_task(req: TaskCompleteRequest, user=Depends(get_current_user)
 @router.post("/set-goal")
 async def update_goal(req: GoalRequest, user=Depends(get_current_user)):
     """Set or update the student's career goal and deadline."""
-    user_id = user.get("id") or user.get("user_id")
+    user_id = str(user.id) if hasattr(user, "id") else None
     result = set_user_goal(user_id, req.goal, req.deadline)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("message", "Failed to set goal."))

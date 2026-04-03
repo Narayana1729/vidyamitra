@@ -227,6 +227,20 @@ const StudyRoadmap = ({ subjects, uid }) => {
   const [expandedPlanners, setExpandedPlanners] = useState({});
   const [swapSource, setSwapSource] = useState(null);
   const [selectedDayResource, setSelectedDayResource] = useState(null);
+  const [struckOutDays, setStruckOutDays] = useState({});
+
+  // Initialize customOrder if it's not set
+  useEffect(() => {
+    if (prefs && !prefs.customOrder && subjects && subjects.length > 0) {
+      // Flatten subjects by phase order
+      const flat = [...subjects].sort((a, b) => {
+        if (a.phase !== b.phase) return a.phase - b.phase;
+        return a.order - b.order;
+      });
+      setQAnswers(p => ({ ...p, customOrder: flat.map(s => s.id) }));
+      setPrefs(p => ({ ...p, customOrder: flat.map(s => s.id) }));
+    }
+  }, [subjects, prefs]);
 
   const performSwap = (phaseId, idx1, idx2, currentSchedule) => {
       const newSchedule = [...currentSchedule];
@@ -268,9 +282,11 @@ const StudyRoadmap = ({ subjects, uid }) => {
     setQAnswers(prev => {
       const current = prev.completedTopics[subId] || [];
       const updated = isChecked 
-        ? [...current, topic]
+        ? [...new Set([...current, topic])]
         : current.filter(t => t !== topic);
-      return { ...prev, completedTopics: { ...prev.completedTopics, [subId]: updated } };
+      const nextQAnswers = { ...prev, completedTopics: { ...prev.completedTopics, [subId]: updated } };
+      localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(nextQAnswers));
+      return nextQAnswers;
     });
   };
 
@@ -328,13 +344,19 @@ const StudyRoadmap = ({ subjects, uid }) => {
                  </div>
              )}
              
-             <button className="btn btn-primary" style={{ width: '100%', background: 'var(--emerald)', border: 'none', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12 }}
+             <button className="btn btn-primary" style={{ width: '100%', background: struckOutDays[id] ? 'var(--rose)' : 'var(--emerald)', border: 'none', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 12 }}
                 onClick={() => {
-                   setStruckOutDays(prev => ({ ...prev, [id]: true }));
+                   if (struckOutDays[id]) {
+                       setStruckOutDays(prev => { const n = {...prev}; delete n[id]; return n; });
+                       toggleTopic(sub.id, topic, false);
+                   } else {
+                       setStruckOutDays(prev => ({ ...prev, [id]: true }));
+                       toggleTopic(sub.id, topic, true);
+                   }
                    setSelectedDayResource(null);
-                   setTimeout(() => toggleTopic(sub.id, topic, true), 500);
                 }}>
-                <CheckCircle2 size={18} /> Mark Topic as Completed
+                {struckOutDays[id] ? <RotateCcw size={18} /> : <CheckCircle2 size={18} />}
+                {struckOutDays[id] ? 'Undo Completed Status' : 'Mark Topic as Completed'}
              </button>
           </div>
         </motion.div>
@@ -472,18 +494,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
 
   const globalCompletionPct = overallTotalTopics > 0 ? Math.round((overallCompletedTopics / overallTotalTopics) * 100) : 0;
 
-  // Initialize customOrder if it's not set
-  useEffect(() => {
-    if (!customOrder && phases.length > 0) {
-      // Flatten subjects by phase order
-      const flat = [...subjects].sort((a, b) => {
-        if (a.phase !== b.phase) return a.phase - b.phase;
-        return a.order - b.order;
-      });
-      setQAnswers(p => ({ ...p, customOrder: flat.map(s => s.id) }));
-      setPrefs(p => ({ ...p, customOrder: flat.map(s => s.id) }));
-    }
-  }, [subjects, phases.length]);
+
 
   const moveSubject = (idx, direction) => {
     if (!customOrder) return;
@@ -583,24 +594,50 @@ const StudyRoadmap = ({ subjects, uid }) => {
                  
                  if (topicsQueue.length === 0) return null;
                  
-                 // Interleave queue
-                 const interleavedSchedule = [];
-                 const queueProps = [...topicsQueue];
-                 const counters = {};
+                 // Interleave by subject to ensure day-to-day variety
+                 const subjectQueues = {};
+                 topicsQueue.forEach(q => {
+                     if (!subjectQueues[q.sub.id]) subjectQueues[q.sub.id] = { sub: q.sub, topics: [] };
+                     subjectQueues[q.sub.id].topics.push(q);
+                 });
                  
-                 let idx = 0;
-                 while (queueProps.length > 0) {
-                     if (idx >= queueProps.length) idx = 0;
-                     const curr = queueProps[idx];
-                     const key = `${curr.sub.id}_${curr.topic}`;
+                 const activeSubjects = Object.values(subjectQueues);
+                 const interleavedSchedule = [];
+                 let seed = parseInt(phase.id) * 1000 || 1234;
+                 let lastSubId = null;
+                 
+                 while (activeSubjects.length > 0) {
+                     // Find available candidates avoiding the last chosen subject if possible
+                     let availableIdxs = [];
+                     for (let i = 0; i < activeSubjects.length; i++) {
+                         if (activeSubjects[i].sub.id !== lastSubId || activeSubjects.length === 1) {
+                             availableIdxs.push(i);
+                         }
+                     }
+                     
+                     // Deterministic pseudo-random pick to keep React renders stable
+                     const x = Math.sin(seed++) * 10000;
+                     const pseudoRand = x - Math.floor(x);
+                     
+                     const randomArrIdx = Math.floor(pseudoRand * availableIdxs.length);
+                     const subIdx = availableIdxs[randomArrIdx];
+                     
+                     const currSubQueue = activeSubjects[subIdx];
+                     const currTopicObj = currSubQueue.topics[0];
+                     
+                     const key = `${currTopicObj.sub.id}_${currTopicObj.topic}`;
                      counters[key] = (counters[key] || 0) + 1;
                      const itemId = `${key}_${counters[key]}`;
-                     interleavedSchedule.push({ sub: curr.sub, topic: curr.topic, id: itemId });
-                     curr.partsRemaining--;
-                     if (curr.partsRemaining <= 0) {
-                         queueProps.splice(idx, 1);
-                     } else {
-                         idx++;
+                     
+                     interleavedSchedule.push({ sub: currTopicObj.sub, topic: currTopicObj.topic, id: itemId });
+                     lastSubId = currTopicObj.sub.id;
+                     
+                     currTopicObj.partsRemaining--;
+                     if (currTopicObj.partsRemaining <= 0) {
+                         currSubQueue.topics.shift();
+                         if (currSubQueue.topics.length === 0) {
+                             activeSubjects.splice(subIdx, 1);
+                         }
                      }
                  }
 
@@ -664,10 +701,15 @@ const StudyRoadmap = ({ subjects, uid }) => {
                                                         <button className="btn btn-ghost" style={{ padding: 3, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isStruckOut ? 'var(--emerald)' : 'var(--text-muted)' }}
                                                            onClick={e => {
                                                                e.stopPropagation();
-                                                               setStruckOutDays(prev => ({ ...prev, [dayItem.id]: true }));
-                                                               setTimeout(() => toggleTopic(dayItem.sub.id, dayItem.topic, true), 500);
-                                                           }} title="Mark Completed">
-                                                           {isStruckOut ? <CheckCircle2 size={16} /> : <Check size={16} />}
+                                                               if (isStruckOut) {
+                                                                   setStruckOutDays(prev => { const n = {...prev}; delete n[dayItem.id]; return n; });
+                                                                   toggleTopic(dayItem.sub.id, dayItem.topic, false);
+                                                               } else {
+                                                                   setStruckOutDays(prev => ({ ...prev, [dayItem.id]: true }));
+                                                                   toggleTopic(dayItem.sub.id, dayItem.topic, true);
+                                                               }
+                                                           }} title={isStruckOut ? "Undo Completed" : "Mark Completed"}>
+                                                           {isStruckOut ? <RotateCcw size={16} /> : <Check size={16} />}
                                                         </button>
                                                     )}
                                                     <span className="badge badge-cyan" style={{ fontSize: 10, minWidth: 42, background: isSwapSource ? 'var(--amber)' : undefined, color: isSwapSource ? '#000' : undefined }}>Day {globalIdx + 1}</span>
