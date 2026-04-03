@@ -324,24 +324,33 @@ export default function InterviewPlayer({ question, interviewType, isFollowup, i
                         </div>
                     )}
 
-                    {/* Action button — single Run button, auto-submits on 3rd */}
+                    {/* Action buttons */}
                     <div style={{ display: 'flex', gap: 12 }}>
                         <button
-                            className={runsRemaining === 1 ? "btn btn-primary" : "btn btn-secondary"}
+                            className="btn btn-secondary"
                             onClick={handleRunCode}
                             disabled={isRunning || loading || runsRemaining <= 0 || !code.trim()}
                             style={{ flex: 1, padding: '14px 20px', fontSize: 15 }}
                         >
                             {isRunning ? (
                                 <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Running...</>
-                            ) : loading ? (
-                                <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Submitting...</>
                             ) : runsRemaining <= 0 ? (
-                                <><Sparkles size={16} /> Submitted!</>
-                            ) : runsRemaining === 1 ? (
-                                <><Play size={16} /> Final Run (auto-submits)</>
+                                <><Sparkles size={16} /> Runs Exhausted</>
                             ) : (
                                 <><Play size={16} /> Run Code ({runsRemaining} left)</>
+                            )}
+                        </button>
+                        
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => onSubmit(code, code)}
+                            disabled={loading || isRunning || !code.trim()}
+                            style={{ flex: 1, padding: '14px 20px', fontSize: 15 }}
+                        >
+                            {loading ? (
+                                <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Submitting...</>
+                            ) : (
+                                <><Send size={16} /> Submit Code</>
                             )}
                         </button>
                     </div>
@@ -419,6 +428,34 @@ export default function InterviewPlayer({ question, interviewType, isFollowup, i
                             onChange={e => setAnswer(e.target.value)}
                             style={{ flex: 1, minHeight: 200, padding: 20, fontSize: 15, resize: 'none', marginBottom: 16 }}
                         />
+                        {/* Speech-to-text tip */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 14px', marginBottom: 12,
+                            background: 'color-mix(in srgb, var(--cyan) 6%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--cyan) 15%, transparent)',
+                            borderRadius: 8, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5,
+                        }}>
+                            <span style={{ fontSize: 18, flexShrink: 0 }}>🎙️</span>
+                            <span>
+                                <strong style={{ color: 'var(--cyan)' }}>Want to speak your answer?</strong>{' '}
+                                Use your built-in speech-to-text — press{' '}
+                                <kbd style={{
+                                    padding: '2px 6px', background: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border)', borderRadius: 4,
+                                    fontFamily: 'var(--font-primary)', fontSize: 11, fontWeight: 600,
+                                    color: 'var(--text-primary)',
+                                }}>Fn + F5</kbd>{' '}
+                                on Mac or{' '}
+                                <kbd style={{
+                                    padding: '2px 6px', background: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border)', borderRadius: 4,
+                                    fontFamily: 'var(--font-primary)', fontSize: 11, fontWeight: 600,
+                                    color: 'var(--text-primary)',
+                                }}>Win + H</kbd>{' '}
+                                on Windows, then start speaking.
+                            </span>
+                        </div>
                         <button
                             className="btn btn-primary"
                             onClick={handleSubmitText}

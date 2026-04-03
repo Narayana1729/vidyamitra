@@ -15,13 +15,13 @@ const MARKET_STATS = [
   { label: 'Remote Positions', value: '42%', icon: Globe, color: 'var(--cyan)' },
   { label: 'Avg Salary Growth', value: '+12%', icon: DollarSign, color: 'var(--emerald)' },
   { label: 'New Openings (Monthly)', value: '1.2M', icon: Zap, color: 'var(--amber)' },
-  { label: 'Hiring Rate', value: '68%', icon: TrendingUp, color: 'var(--primary)' },
+  { label: 'Hiring Rate', value: '68%', icon: TrendingUp, color: 'var(--accent-primary)' },
 ];
 
 const statusConfig = {
   hot:      { label: '🔥 Hot',     bg: 'rgba(239,68,68,0.1)',  color: 'var(--rose)',    border: 'rgba(239,68,68,0.25)' },
   growing:  { label: '📈 Growing', bg: 'rgba(16,185,129,0.1)', color: 'var(--emerald)', border: 'rgba(16,185,129,0.25)' },
-  stable:   { label: '➡️ Stable',  bg: 'rgba(99,102,241,0.1)', color: 'var(--primary)', border: 'rgba(99,102,241,0.25)' },
+  stable:   { label: '➡️ Stable',  bg: 'rgba(99,102,241,0.1)', color: 'var(--accent-primary)', border: 'rgba(99,102,241,0.25)' },
   declining:{ label: '📉 Declining',bg:'rgba(245,158,11,0.1)', color: 'var(--amber)',   border: 'rgba(245,158,11,0.25)' },
 };
 
@@ -162,7 +162,7 @@ export default function JobBoard() {
       {/* ── Enhanced Search Bar ── */}
       <div style={{
         padding: 3, borderRadius: 14, marginBottom: 28,
-        background: 'linear-gradient(135deg, var(--primary), var(--cyan), var(--emerald))',
+        background: 'linear-gradient(135deg, var(--accent-primary), var(--cyan), var(--emerald))',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
@@ -196,7 +196,7 @@ export default function JobBoard() {
                 onClick={() => setSearch(tag.toLowerCase())}
                 style={{
                   padding: '5px 12px', fontSize: 12, fontWeight: 500, borderRadius: 6,
-                  border: '1px solid var(--border)', background: search.toLowerCase() === tag.toLowerCase() ? 'var(--primary)' : 'var(--bg-glass)',
+                  border: '1px solid var(--border)', background: search.toLowerCase() === tag.toLowerCase() ? 'var(--accent-primary)' : 'var(--bg-glass)',
                   color: search.toLowerCase() === tag.toLowerCase() ? '#fff' : 'var(--text-muted)',
                   cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
                 }}
@@ -283,7 +283,7 @@ export default function JobBoard() {
                               <span style={{
                                 fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
                                 background: skill.change > 10 ? 'rgba(16,185,129,0.12)' : 'rgba(99,102,241,0.12)',
-                                color: skill.change > 10 ? 'var(--emerald)' : 'var(--primary)',
+                                color: skill.change > 10 ? 'var(--emerald)' : 'var(--accent-primary)',
                               }}>
                                 +{skill.change}%
                               </span>
@@ -296,7 +296,7 @@ export default function JobBoard() {
                               transition={{ duration: 0.8, delay: i * 0.08 }}
                               style={{
                                 height: '100%', borderRadius: 3,
-                                background: `linear-gradient(90deg, var(--primary), ${skill.change > 10 ? 'var(--emerald)' : 'var(--cyan)'})`,
+                                background: `linear-gradient(90deg, var(--accent-primary), ${skill.change > 10 ? 'var(--emerald)' : 'var(--cyan)'})`,
                               }}
                             />
                           </div>
@@ -390,15 +390,15 @@ export default function JobBoard() {
                 <div className="glass-card" style={{
                   marginTop: 20, padding: '16px 24px',
                   background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(16,185,129,0.06))',
-                  borderLeft: '4px solid var(--primary)',
+                  borderLeft: '4px solid var(--accent-primary)',
                   display: 'flex', alignItems: 'center', gap: 16,
                 }}>
-                  <Zap size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <Zap size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 14 }}>Pro Tip: </span>
                     <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                       AI/ML and Cloud roles are growing 3× faster than average. Consider upskilling via the{' '}
-                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Learning Roadmap</span>{' '}
+                      <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Learning Roadmap</span>{' '}
                       to target these high-demand areas.
                     </span>
                   </div>
@@ -461,7 +461,7 @@ export default function JobBoard() {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '8px',
-                    background: 'var(--bg-lighter)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-primary)'
                   }}>
                     {job.profiles?.company_name?.[0]?.toUpperCase() || 'C'}
@@ -484,7 +484,7 @@ export default function JobBoard() {
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
                   {(job.skills_required || []).slice(0, 3).map(skill => (
                     <span key={skill} style={{
-                      padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-lighter)',
+                      padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-tertiary)',
                       fontSize: '11px', fontWeight: '500', color: 'var(--text-muted)'
                     }}>{skill}</span>
                   ))}
@@ -497,7 +497,7 @@ export default function JobBoard() {
 
                 <button
                   className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '8px', background: 'var(--primary)', color: '#fff' }}
+                  style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => handleMockInterview(job)}
                   disabled={generatingMock === job.id}
                 >
@@ -541,7 +541,7 @@ export default function JobBoard() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontSize: '24px', marginBottom: '4px' }}>{activeJob.title}</h2>
+                <h2 style={{ fontSize: '24px', marginBottom: '4px', color: 'var(--text-primary)' }}>{activeJob.title}</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{activeJob.profiles?.company_name}</p>
               </div>
               <button
@@ -579,7 +579,7 @@ export default function JobBoard() {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {(activeJob.skills_required || []).map(skill => (
                   <span key={skill} style={{
-                    padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-lighter)',
+                    padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)',
                     fontSize: '13px', fontWeight: '500'
                   }}>{skill}</span>
                 ))}
@@ -623,7 +623,7 @@ export default function JobBoard() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontSize: '24px', marginBottom: '4px' }}>Generated Mock Interview</h2>
+                <h2 style={{ fontSize: '24px', marginBottom: '4px', color: 'var(--text-primary)' }}>Generated Mock Interview</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{mockInterviewData.job_title}</p>
               </div>
               <button
@@ -638,11 +638,11 @@ export default function JobBoard() {
               {(mockInterviewData.questions || []).map((q, i) => (
                 <div key={i} className="glass-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', textTransform: 'uppercase' }}>{q.type}</span>
+                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-primary)', textTransform: 'uppercase' }}>{q.type}</span>
                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: q.difficulty === 'Hard' ? 'var(--rose)' : q.difficulty === 'Medium' ? 'var(--amber)' : 'var(--emerald)' }}>{q.difficulty}</span>
                   </div>
-                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', lineHeight: '1.5' }}>Q{i + 1}: {q.question}</h4>
-                  <div style={{ background: 'var(--bg-lighter)', padding: '16px', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', lineHeight: '1.5', color: 'var(--text-primary)' }}>Q{i + 1}: {q.question}</h4>
+                  <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px' }}>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 'bold' }}>Expected Answer:</p>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>{q.expected_answer}</p>
                   </div>

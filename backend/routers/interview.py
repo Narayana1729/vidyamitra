@@ -69,17 +69,19 @@ async def start_interview(request: InterviewStartRequest, user=Depends(get_curre
     # Generate first question from bank (or LLM fallback)
     first_q = generate_question(request.role, request.interview_type, request.difficulty, [], domain)
     
-    save_to_supabase("interview_sessions", {
+    save_res = save_to_supabase("interview_sessions", {
         "user_id": str(user.id),
         "session_id": session_id,
         "role": request.role,
         "interview_type": request.interview_type,
         "difficulty": request.difficulty,
-        "domain": domain,  # NEW
         "questions": [first_q],
         "total_questions": request.num_questions,
         "status": "in_progress"
     })
+    
+    if save_res is None:
+        raise HTTPException(500, "Failed to initialize interview session in DB.")
     
     save_to_supabase("activity_log", {
         "user_id": str(user.id),
@@ -106,7 +108,7 @@ async def evaluate_user_answer(request: AnswerEvalRequest, user=Depends(get_curr
         raise HTTPException(503, "Database not configured")
         
     session_resp = supabase.table("interview_sessions").select("*").eq("session_id", request.session_id).maybe_single().execute()
-    if not session_resp.data:
+    if session_resp is None or not getattr(session_resp, "data", None):
         raise HTTPException(404, "Session not found")
         
     session = session_resp.data
@@ -115,7 +117,13 @@ async def evaluate_user_answer(request: AnswerEvalRequest, user=Depends(get_curr
     role = session["role"]
     interview_type = session["interview_type"]
     difficulty = session["difficulty"]
-    domain = session.get("domain", "Software Engineering / CS / IT")
+    domain = "Software Engineering / CS / IT"
+    try:
+        profile = supabase.table("profiles").select("domain").eq("id", str(user.id)).maybe_single().execute()
+        if profile and getattr(profile, "data", None) and profile.data.get("domain"):
+            domain = profile.data["domain"]
+    except Exception:
+        pass
     total_q = session["total_questions"]
     questions_list = session["questions"] or []
 

@@ -252,6 +252,19 @@ CREATE TABLE IF NOT EXISTS user_goals (
     UNIQUE(user_id)
 );
 
+-- 15. Higher Studies Progress
+CREATE TABLE IF NOT EXISTS higher_studies_progress (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    track TEXT NOT NULL,
+    roadmap_prefs JSONB DEFAULT '{}',
+    struck_out_days JSONB DEFAULT '{}',
+    quiz_history JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, track)
+);
+
 -- ============================================================
 -- Additional Indexes for new Phase 7 & AI features
 -- ============================================================
@@ -261,3 +274,4 @@ CREATE INDEX IF NOT EXISTS idx_ai_insights_user ON ai_insights(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_plans_user ON daily_plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_plans_date ON daily_plans(plan_date);
 CREATE INDEX IF NOT EXISTS idx_user_goals_user ON user_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_higher_studies_progress_user ON higher_studies_progress(user_id);

@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
+
+const BASE_API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API = BASE_API.endsWith('/api') ? BASE_API : `${BASE_API}/api`;
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   GraduationCap, BookOpen, Clock, ChevronDown, ChevronUp, Map, FileText,
@@ -208,23 +212,14 @@ const SubjectsView = ({ subjects, studyPhases }) => {
 
 // ─────────────── STUDY ROADMAP ───────────────
 const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
-  const [prefs, setPrefs] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey(uid, storagePrefix, 'roadmap_prefs'));
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [isQuestionnaire, setIsQuestionnaire] = useState(!prefs);
+  const [prefs, setPrefs] = useState(null);
   const [qAnswers, setQAnswers] = useState({
-    started: prefs?.started || false,
-    completedTopics: prefs?.completedTopics || {},
-    topicDays: prefs?.topicDays || {},
-    dailyHours: prefs?.dailyHours || 3,
-    months: prefs?.months || 6,
-    customOrder: prefs?.customOrder || null,
+    started: false,
+    completedTopics: {},
+    topicDays: {},
+    dailyHours: 3,
+    months: 6,
+    customOrder: null,
   });
   
   const [expandedSubject, setExpandedSubject] = useState(null);
@@ -234,6 +229,67 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
   const [swapSource, setSwapSource] = useState(null);
   const [selectedDayResource, setSelectedDayResource] = useState(null);
   const [struckOutDays, setStruckOutDays] = useState({});
+  const [isQuestionnaire, setIsQuestionnaire] = useState(true);
+  const [loadingDb, setLoadingDb] = useState(true);
+
+  // Initialize data from API
+  useEffect(() => {
+    const fetchDb = async () => {
+      const token = localStorage.getItem('vm_token');
+      if (!token) { setLoadingDb(false); return; }
+      try {
+        const res = await axios.get(`${API}/higher-studies/progress/${storagePrefix}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.roadmap_prefs) {
+            setPrefs(res.data.roadmap_prefs);
+            setQAnswers(p => ({ ...p, ...res.data.roadmap_prefs }));
+            setIsQuestionnaire(false);
+        }
+        if (res.data.struck_out_days) {
+            setStruckOutDays(res.data.struck_out_days);
+        }
+      } catch (err) {
+        console.error("DB Fetch Error", err);
+      } finally {
+        setLoadingDb(false);
+      }
+    };
+    fetchDb();
+  }, [storagePrefix, uid]);
+
+  const saveProgressDB = async (newPrefs, newStruckDays) => {
+    const token = localStorage.getItem('vm_token');
+    if (!token) return;
+    try {
+      await axios.post(`${API}/higher-studies/progress/${storagePrefix}`, {
+        roadmap_prefs: newPrefs,
+        struck_out_days: newStruckDays
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      // Milestones check
+      if (newStruckDays) {
+          const compCount = Object.keys(newStruckDays).length;
+          let milestone = null;
+          if (compCount === 1) milestone = `Started their ${storagePrefix.toUpperCase()} preparations!`;
+          else if (compCount === 10) milestone = `Completed 10 study days in ${storagePrefix.toUpperCase()}`;
+          else if (compCount === 25) milestone = `Completed 25 study days in ${storagePrefix.toUpperCase()}! Consistency is key.`;
+          else if (compCount === 50) milestone = `Halfway through? 50 days completed in ${storagePrefix.toUpperCase()}`;
+          else if (compCount === 100) milestone = `Mastery incoming: 100 study days completed for ${storagePrefix.toUpperCase()}!`;
+          
+          // Using a local flag to avoid re-triggering same milestone
+          const milestoneKey = `ms_${storagePrefix}_${compCount}`;
+          if (milestone && !localStorage.getItem(milestoneKey)) {
+             localStorage.setItem(milestoneKey, '1');
+             await axios.post(`${API}/higher-studies/log-activity`, {
+                action: milestone,
+             }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+          }
+      }
+    } catch (err) {
+      console.error("DB Save Error", err);
+    }
+  };
 
   // Initialize customOrder if it's not set
   useEffect(() => {
@@ -244,9 +300,22 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
         return a.order - b.order;
       });
       setQAnswers(p => ({ ...p, customOrder: flat.map(s => s.id) }));
-      setPrefs(p => ({ ...p, customOrder: flat.map(s => s.id) }));
+      setPrefs(p => {
+        const np = { ...p, customOrder: flat.map(s => s.id) };
+        saveProgressDB(np, null);
+        return np;
+      });
     }
-  }, [subjects]);
+  }, [subjects, prefs]);
+
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (mounted.current && prefs) {
+        saveProgressDB(prefs, struckOutDays);
+    } else {
+        mounted.current = true;
+    }
+  }, [struckOutDays]);
 
   const performSwap = (phaseId, idx1, idx2, currentSchedule) => {
       const newSchedule = [...currentSchedule];
@@ -262,7 +331,7 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
           }
       };
       setPrefs(newPrefs);
-      localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(newPrefs));
+      saveProgressDB(newPrefs, struckOutDays);
       setSwapSource(null);
   };
 
@@ -275,13 +344,13 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
     const updatedPrefs = { ...prefs, topicDays: newTopicDays };
     setPrefs(updatedPrefs);
     setQAnswers(q => ({ ...q, topicDays: newTopicDays }));
-    localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(updatedPrefs));
+    saveProgressDB(updatedPrefs, struckOutDays);
   };
 
   const handleSave = () => {
-    localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(qAnswers));
     setPrefs(qAnswers);
     setIsQuestionnaire(false);
+    saveProgressDB(qAnswers, struckOutDays);
   };
 
   const toggleTopic = (subId, topic, isChecked) => {
@@ -291,7 +360,7 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
         ? [...new Set([...current, topic])]
         : current.filter(t => t !== topic);
       const nextQAnswers = { ...prev, completedTopics: { ...prev.completedTopics, [subId]: updated } };
-      localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(nextQAnswers));
+      saveProgressDB(nextQAnswers, struckOutDays);
       return nextQAnswers;
     });
   };
@@ -354,10 +423,8 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
                 onClick={() => {
                    if (struckOutDays[id]) {
                        setStruckOutDays(prev => { const n = {...prev}; delete n[id]; return n; });
-                       toggleTopic(sub.id, topic, false);
                    } else {
                        setStruckOutDays(prev => ({ ...prev, [id]: true }));
-                       toggleTopic(sub.id, topic, true);
                    }
                    setSelectedDayResource(null);
                 }}>
@@ -547,10 +614,13 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
               {feasibilityBadge}
             </span>
           </h3>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, marginBottom: 8 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
             <span>🗓️ {months} months</span>
             <span>⏱️ {dailyHours} hrs/day</span>
             <span>📊 {started ? `~${globalCompletionPct}% Topics Completed` : 'Starting Fresh'}</span>
+            {Object.keys(struckOutDays).length > 0 && (
+              <span style={{ color: 'var(--emerald)' }}>✅ {Object.keys(struckOutDays).length} Timetable Days Completed</span>
+            )}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
             {feasibilityMessage}
@@ -581,16 +651,17 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
              return phases.map((phase) => {
                  const topicsQueue = [];
                  
+                 // Use ALL topics (don't filter by completedTopics) so timetable
+                 // IDs stay stable when days are ticked off.
                  phase.subjects.forEach(sub => {
-                     if (sub.isCompleted) return;
-                     const remainingTopics = sub.topics ? sub.topics.filter(t => !(completedTopics && completedTopics[sub.id] && completedTopics[sub.id].includes(t))) : [];
-                     if (remainingTopics.length === 0) return;
+                     const allTopics = sub.topics || [];
+                     if (allTopics.length === 0) return;
                      
-                     const scaledBaseWeeks = Math.max(1, Math.round(sub.studyWeeks * scale * (1 - sub.completionRatio)));
+                     const scaledBaseWeeks = Math.max(1, Math.round(sub.studyWeeks * scale));
                      const scaledBaseDays = scaledBaseWeeks * 7;
-                     const autoDefaultDaysPerTopic = Math.max(1, Math.round(scaledBaseDays / remainingTopics.length));
+                     const autoDefaultDaysPerTopic = Math.max(1, Math.round(scaledBaseDays / allTopics.length));
                      
-                     remainingTopics.forEach(t => {
+                     allTopics.forEach(t => {
                          const customDays = prefs.topicDays?.[sub.id]?.[t];
                          const totalDays = typeof customDays === 'number' ? customDays : autoDefaultDaysPerTopic;
                          topicsQueue.push({ sub, topic: t, partsRemaining: totalDays });
@@ -709,10 +780,8 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
                                                                e.stopPropagation();
                                                                if (isStruckOut) {
                                                                    setStruckOutDays(prev => { const n = {...prev}; delete n[dayItem.id]; return n; });
-                                                                   toggleTopic(dayItem.sub.id, dayItem.topic, false);
                                                                } else {
                                                                    setStruckOutDays(prev => ({ ...prev, [dayItem.id]: true }));
-                                                                   toggleTopic(dayItem.sub.id, dayItem.topic, true);
                                                                }
                                                            }} title={isStruckOut ? "Undo Completed" : "Mark Completed"}>
                                                            {isStruckOut ? <RotateCcw size={16} /> : <Check size={16} />}
@@ -934,13 +1003,6 @@ const MockQuiz = ({ subjects, uid, storagePrefix }) => {
   const quizSubjects = subjects.filter(s => s.questions && s.questions.length > 0);
   const questions = selectedSubject?.questions || [];
 
-  useEffect(() => {
-    if (phase !== 'active') return;
-    if (timeLeft <= 0) { handleSubmit(); return; }
-    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearInterval(timer);
-  }, [phase, timeLeft, handleSubmit]);
-
   const startQuiz = (sub) => {
     setSelectedSubject(sub);
     setQIdx(0);
@@ -950,7 +1012,7 @@ const MockQuiz = ({ subjects, uid, storagePrefix }) => {
     setShowExplanation({});
   };
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!selectedSubject) return;
     const qs = selectedSubject.questions;
     let score = 0;
@@ -962,13 +1024,39 @@ const MockQuiz = ({ subjects, uid, storagePrefix }) => {
       pct: Math.round((score / qs.length) * 100),
       date: new Date().toISOString(),
     };
-    // Save to localStorage
+    
+    // Save to DB
     const key = storageKey(uid, storagePrefix, 'quiz_history');
-    const history = JSON.parse(localStorage.getItem(key) || '[]');
-    history.push(result);
-    localStorage.setItem(key, JSON.stringify(history));
+    const token = localStorage.getItem('vm_token');
+    try {
+       // local sync
+       const history = JSON.parse(localStorage.getItem(key) || '[]');
+       history.push(result);
+       localStorage.setItem(key, JSON.stringify(history));
+       
+       if (token) {
+           await axios.post(`${API}/higher-studies/progress/${storagePrefix}`, {
+               quiz_history: history
+           }, { headers: { Authorization: `Bearer ${token}` } });
+           
+           if (result.pct >= 80) {
+               await axios.post(`${API}/higher-studies/log-activity`, {
+                  action: `Cracked a Mock Quiz in ${selectedSubject.name} with ${result.pct}% Score! 🎯`
+               }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+           }
+       }
+    } catch (e) {
+       console.error("Quiz DB Save Error", e);
+    }
     setPhase('result');
-  }, [selectedSubject, answers, uid]);
+  }, [selectedSubject, answers, uid, storagePrefix]);
+
+  useEffect(() => {
+    if (phase !== 'active') return;
+    if (timeLeft <= 0) { handleSubmit(); return; }
+    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearInterval(timer);
+  }, [phase, timeLeft, handleSubmit]);
 
   if (phase === 'select') {
     return (
@@ -1107,7 +1195,37 @@ const MockQuiz = ({ subjects, uid, storagePrefix }) => {
 
 // ─────────────── PERFORMANCE ───────────────
 const PerformanceView = ({ uid, subjects, storagePrefix }) => {
-  const history = JSON.parse(localStorage.getItem(storageKey(uid, storagePrefix, 'quiz_history')) || '[]');
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const token = localStorage.getItem('vm_token');
+      if (!token) {
+        setHistory(JSON.parse(localStorage.getItem(storageKey(uid, storagePrefix, 'quiz_history')) || '[]'));
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await axios.get(`${API}/higher-studies/progress/${storagePrefix}`, {
+           headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data && res.data.quiz_history) {
+           setHistory(res.data.quiz_history);
+           localStorage.setItem(storageKey(uid, storagePrefix, 'quiz_history'), JSON.stringify(res.data.quiz_history));
+        }
+      } catch(e) {
+        setHistory(JSON.parse(localStorage.getItem(storageKey(uid, storagePrefix, 'quiz_history')) || '[]'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, [uid, storagePrefix]);
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: 48 }}><Timer className="spinner" size={32} /></div>;
+  }
 
   if (history.length === 0) {
     return (
@@ -1403,19 +1521,30 @@ const TRACKS = [
 ];
 
 export default function HigherStudies() {
-  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [selectedTrack, setSelectedTrack] = useState(() => {
+    return localStorage.getItem('vidyamitra_last_higher_studies_track') || null;
+  });
+
+  const handleTrackSelect = (trackId) => {
+    setSelectedTrack(trackId);
+    if (trackId) {
+      localStorage.setItem('vidyamitra_last_higher_studies_track', trackId);
+    } else {
+      localStorage.removeItem('vidyamitra_last_higher_studies_track');
+    }
+  };
 
   const renderModule = () => {
     switch (selectedTrack) {
-       case 'GATE': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={GATE_EXAM_INFO} platforms={GATE_PLATFORMS} branches={GATE_BRANCHES} studyPhases={GATE_STUDY_PHASES} storagePrefix="gate" />;
-       case 'UPSC': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={UPSC_EXAM_INFO} platforms={UPSC_PLATFORMS} branches={UPSC_BRANCHES} studyPhases={UPSC_STUDY_PHASES} storagePrefix="upsc" />;
-       case 'MBA': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={CAT_EXAM_INFO} platforms={[]} branches={CAT_BRANCHES} studyPhases={CAT_STUDY_PHASES} storagePrefix="mba" />;
-       case 'MASTERS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={MASTERS_EXAM_INFO} platforms={[]} branches={MASTERS_BRANCHES} studyPhases={MASTERS_STUDY_PHASES} storagePrefix="masters" />;
-       case 'BANKING': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={BANKING_EXAM_INFO} platforms={BANKING_PLATFORMS} branches={BANKING_BRANCHES} studyPhases={BANKING_STUDY_PHASES} storagePrefix="banking" />;
-       case 'RAILWAYS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={RAILWAYS_EXAM_INFO} platforms={RAILWAYS_PLATFORMS} branches={RAILWAYS_BRANCHES} studyPhases={RAILWAYS_STUDY_PHASES} storagePrefix="railways" />;
-       case 'GROUPS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={GROUPS_EXAM_INFO} platforms={GROUPS_PLATFORMS} branches={GROUPS_BRANCHES} studyPhases={GROUPS_STUDY_PHASES} storagePrefix="groups" />;
-       case 'NEET': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={NEET_EXAM_INFO} platforms={NEET_PLATFORMS} branches={NEET_BRANCHES} studyPhases={NEET_STUDY_PHASES} storagePrefix="neet" />;
-       case 'ABROAD': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={ABROAD_EXAM_INFO} platforms={ABROAD_PLATFORMS} branches={ABROAD_BRANCHES} studyPhases={ABROAD_STUDY_PHASES} storagePrefix="abroad" />;
+       case 'GATE': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={GATE_EXAM_INFO} platforms={GATE_PLATFORMS} branches={GATE_BRANCHES} studyPhases={GATE_STUDY_PHASES} storagePrefix="gate" />;
+       case 'UPSC': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={UPSC_EXAM_INFO} platforms={UPSC_PLATFORMS} branches={UPSC_BRANCHES} studyPhases={UPSC_STUDY_PHASES} storagePrefix="upsc" />;
+       case 'MBA': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={CAT_EXAM_INFO} platforms={[]} branches={CAT_BRANCHES} studyPhases={CAT_STUDY_PHASES} storagePrefix="mba" />;
+       case 'MASTERS': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={MASTERS_EXAM_INFO} platforms={[]} branches={MASTERS_BRANCHES} studyPhases={MASTERS_STUDY_PHASES} storagePrefix="masters" />;
+       case 'BANKING': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={BANKING_EXAM_INFO} platforms={BANKING_PLATFORMS} branches={BANKING_BRANCHES} studyPhases={BANKING_STUDY_PHASES} storagePrefix="banking" />;
+       case 'RAILWAYS': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={RAILWAYS_EXAM_INFO} platforms={RAILWAYS_PLATFORMS} branches={RAILWAYS_BRANCHES} studyPhases={RAILWAYS_STUDY_PHASES} storagePrefix="railways" />;
+       case 'GROUPS': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={GROUPS_EXAM_INFO} platforms={GROUPS_PLATFORMS} branches={GROUPS_BRANCHES} studyPhases={GROUPS_STUDY_PHASES} storagePrefix="groups" />;
+       case 'NEET': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={NEET_EXAM_INFO} platforms={NEET_PLATFORMS} branches={NEET_BRANCHES} studyPhases={NEET_STUDY_PHASES} storagePrefix="neet" />;
+       case 'ABROAD': return <StudyTrackModule onBack={() => handleTrackSelect(null)} examInfo={ABROAD_EXAM_INFO} platforms={ABROAD_PLATFORMS} branches={ABROAD_BRANCHES} studyPhases={ABROAD_STUDY_PHASES} storagePrefix="abroad" />;
        case null: return null;
        default: return (
            <div style={{ padding: 60, textAlign: 'center' }}>
@@ -1426,7 +1555,7 @@ export default function HigherStudies() {
               <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 16, maxWidth: 400, margin: '0 auto 32px' }}>
                 This command center module is currently being calibrated. The neuro-link to our servers will be established shortly. 🚧
               </p>
-              <button className="btn btn-secondary" onClick={() => setSelectedTrack(null)}>← Back to Hub</button>
+              <button className="btn btn-secondary" onClick={() => handleTrackSelect(null)}>← Back to Hub</button>
            </div>
        );
     }
@@ -1460,7 +1589,7 @@ export default function HigherStudies() {
           <motion.div key={track.id}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             whileHover={{ y: -6, scale: 1.02 }}
-            onClick={() => setSelectedTrack(track.id)}
+            onClick={() => handleTrackSelect(track.id)}
             style={{
               padding: 24, borderRadius: 16, cursor: 'pointer',
               background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(12px)',
