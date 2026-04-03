@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, FileText, Brain, Mic, TrendingUp } from 'lucide-react';
+import { Clock, FileText, Brain, Mic, TrendingUp, Award, Code, Zap } from 'lucide-react';
 import ScoreCircle from '../ScoreCircle';
-import { Award } from 'lucide-react';
 
 const activityIcons = {
   resume: <FileText size={16} />,
   skill: <Brain size={16} />,
   interview: <Mic size={16} />,
   roadmap: <TrendingUp size={16} />,
+  placement_prediction: <Award size={16} />,
+  archetype_prediction: <Zap size={16} />,
+  coding_profile_update: <Code size={16} />,
 };
 
 const activityColors = {
@@ -16,12 +18,17 @@ const activityColors = {
   skill: 'var(--cyan)',
   interview: 'var(--amber)',
   roadmap: 'var(--emerald)',
+  placement_prediction: 'var(--rose)',
+  archetype_prediction: 'var(--amber)',
+  coding_profile_update: 'var(--cyan)',
 };
 
-export default function ActivityFeed({ activity, stats }) {
+export default function ActivityFeed({ activity = [], stats = {} }) {
   const [expanded, setExpanded] = useState(false);
-  const displayedActivity = expanded ? activity : activity.slice(0, 3);
-  const hasMore = activity.length > 3;
+  const safeActivity = activity || [];
+  const safeStats = stats || {};
+  const displayedActivity = expanded ? safeActivity : safeActivity.slice(0, 3);
+  const hasMore = safeActivity.length > 3;
 
   return (
     <div className="grid-2">
@@ -31,9 +38,9 @@ export default function ActivityFeed({ activity, stats }) {
           <Award size={16} /> Key Metrics
         </h3>
         <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-          <ScoreCircle score={stats.resume_score} label="Resume" />
-          <ScoreCircle score={stats.average_interview_score} label="Interview" color="var(--cyan)" />
-          <ScoreCircle score={stats.learning_progress} label="Learning" color="var(--emerald)" />
+          <ScoreCircle score={safeStats.resume_score} label="Resume" />
+          <ScoreCircle score={safeStats.average_interview_score} label="Interview" color="var(--cyan)" />
+          <ScoreCircle score={safeStats.learning_progress} label="Learning" color="var(--emerald)" />
         </div>
       </div>
 
@@ -43,7 +50,7 @@ export default function ActivityFeed({ activity, stats }) {
           <Clock size={16} /> Recent Activity
         </h3>
 
-        {activity.length === 0 ? (
+        {safeActivity.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: 24,
             color: 'var(--text-muted)', fontSize: 13,

@@ -181,8 +181,7 @@ async def logout(authorization: str = Header(None)):
     if not supabase or not authorization:
         return {"message": "Logged out"}
     try:
-        token = authorization.replace("Bearer ", "")
-        supabase.auth.sign_out(token)
+        supabase.auth.sign_out()
     except Exception:
         pass
     return {"message": "Logged out"}

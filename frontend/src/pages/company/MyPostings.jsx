@@ -4,7 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { MapPin, Users, Edit, Trash2, Settings, ExternalLink } from 'lucide-react';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function MyPostings() {
   const [jobs, setJobs] = useState([]);
@@ -17,7 +17,7 @@ export default function MyPostings() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('vm_token');
-      const res = await axios.get(`${API}/jobs/company/mine`, {
+      const res = await axios.get(`${API}/api/jobs/company/mine`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setJobs(res.data.jobs || []);
@@ -32,7 +32,7 @@ export default function MyPostings() {
     if (!confirm('Are you sure you want to delete this posting?')) return;
     try {
       const token = localStorage.getItem('vm_token');
-      await axios.delete(`${API}/jobs/${id}`, {
+      await axios.delete(`${API}/api/jobs/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setJobs(jobs.filter(j => j.id !== id));
@@ -45,7 +45,7 @@ export default function MyPostings() {
     try {
       const newStatus = job.status === 'active' ? 'closed' : 'active';
       const token = localStorage.getItem('vm_token');
-      await axios.put(`${API}/jobs/${job.id}`, { status: newStatus }, {
+      await axios.put(`${API}/api/jobs/${job.id}`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setJobs(jobs.map(j => j.id === job.id ? { ...j, status: newStatus } : j));

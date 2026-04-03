@@ -532,8 +532,10 @@ def generate_dashboard_intelligence(period: str = "week", user_id: str = None) -
     """Generate complete dashboard data with computed intelligence.
     Uses entirely REAL Supabase data."""
 
-    # 1. Fetch real history
+    # 1. Fetch real history (with fallback if Supabase fails)
     history = _fetch_real_data(period, user_id=user_id)
+    if not history:
+        history = _generate_weekly_data(period=period)
     latest = history[-1]
 
     # 2. Compute trends
@@ -600,9 +602,27 @@ def generate_dashboard_intelligence(period: str = "week", user_id: str = None) -
     real_activity = _fetch_activity_log(limit=50, user_id=user_id)
     if real_activity:
         recent_activity = real_activity[:10]  # Only return top 10 to frontend
-        # Simplistic streak: count unique days of activity looking backwards
-        dates = sorted(list(set(a["date"] for a in real_activity if a["date"] not in ("Unknown", ""))), reverse=True)
-        streak_days = len(dates)
+        # Consecutive streak: count consecutive days of activity from today backwards
+        today = datetime.utcnow().date()
+        active_dates = set()
+        for a in real_activity:
+            d = a.get("date", "")
+            if d == "Today":
+                active_dates.add(today)
+            elif d == "Yesterday":
+                active_dates.add(today - timedelta(days=1))
+            elif d and d.endswith("days ago"):
+                try:
+                    n = int(d.split()[0])
+                    active_dates.add(today - timedelta(days=n))
+                except (ValueError, IndexError):
+                    pass
+        # Count consecutive days starting from today
+        streak_days = 0
+        check_date = today
+        while check_date in active_dates:
+            streak_days += 1
+            check_date -= timedelta(days=1)
 
     weekly_progress = [
         {

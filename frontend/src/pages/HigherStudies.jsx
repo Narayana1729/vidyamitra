@@ -129,7 +129,7 @@ const ExamOverview = ({ info }) => {
         {/* Benefits */}
         <div className="glass-card">
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Award size={18} color="var(--accent-primary)" /> Benefits of GATE
+            <Award size={18} color="var(--accent-primary)" /> Benefits of {info.name}
           </h3>
           {info.benefits.map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
@@ -246,7 +246,7 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
       setQAnswers(p => ({ ...p, customOrder: flat.map(s => s.id) }));
       setPrefs(p => ({ ...p, customOrder: flat.map(s => s.id) }));
     }
-  }, [subjects, prefs]);
+  }, [subjects]);
 
   const performSwap = (phaseId, idx1, idx2, currentSchedule) => {
       const newSchedule = [...currentSchedule];
@@ -335,7 +335,7 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
              <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}><Youtube size={16} color="var(--rose)" /> Video Lectures</h4>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Search for top explanations on this specific topic:</p>
-                <a href={`https://www.youtube.com/results?search_query=GATE+${encodeURIComponent(sub.name)}+${encodeURIComponent(topic)}`} target="_blank" rel="noreferrer"
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(sub.name)}+${encodeURIComponent(topic)}+lecture`} target="_blank" rel="noreferrer"
                    className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%', justifyContent: 'center' }}>
                    <Play size={14} /> Watch {topic} Lectures
                 </a>
@@ -379,7 +379,7 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Question 1 */}
           <div>
-            <label style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'block', color: 'var(--text-secondary)' }}>Have you started your GATE preparation?</label>
+            <label style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'block', color: 'var(--text-secondary)' }}>Have you started your preparation?</label>
             <div style={{ display: 'flex', gap: 12, maxWidth: 400 }}>
               {['Yes', 'No'].map(opt => (
                 <button key={opt} className={`btn ${qAnswers.started === (opt === 'Yes') ? 'btn-primary' : 'btn-secondary'}`}
@@ -499,7 +499,6 @@ const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
   })) : [];
 
   const globalCompletionPct = overallTotalTopics > 0 ? Math.round((overallCompletedTopics / overallTotalTopics) * 100) : 0;
-
 
 
   const moveSubject = (idx, direction) => {
@@ -940,7 +939,7 @@ const MockQuiz = ({ subjects, uid, storagePrefix }) => {
     if (timeLeft <= 0) { handleSubmit(); return; }
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, handleSubmit]);
 
   const startQuiz = (sub) => {
     setSelectedSubject(sub);
@@ -1319,7 +1318,7 @@ const ResourcesView = ({ branchData, platforms }) => {
       <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, fontFamily: 'var(--font-display)' }}>📄 Previous Year Papers</h3>
       <div className="glass-card">
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          Solving previous year GATE papers is the most effective strategy. Access them on:
+          Solving previous year papers is the most effective strategy. Access them on:
         </p>
         {[
           { name: 'Study IQ', url: 'https://studyiq.com' },

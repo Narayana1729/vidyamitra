@@ -6,11 +6,12 @@ Endpoints: placement prediction, career archetype, role classification,
 
 import sys
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from routers.auth import get_current_user
+from utils.db_utils import save_to_supabase
 
 router = APIRouter()
 
@@ -103,14 +104,15 @@ def _load_model(filename: str):
 async def predict_placement(req: PlacementRequest, user=Depends(get_current_user)):
     """Predict placement probability using GradientBoosting + SHAP explanations."""
     try:
+        import shap
         model = _load_model("placement_model.pkl")
         scaler = _load_model("placement_scaler.pkl")
         le = _load_model("branch_encoder.pkl")
-        explainer = _load_model("shap_explainer.pkl")
         features = _load_model("placement_features.pkl")
+        explainer = shap.TreeExplainer(model)
 
         data = req.model_dump()
-        
+
         # Safely map comprehensive frontend domains to precise ML dataset labels
         domain_mapping = {
             "Software Engineering / CS / IT": "CSE",
@@ -120,16 +122,22 @@ async def predict_placement(req: PlacementRequest, user=Depends(get_current_user
             "Civil Engineering": "Civil"
         }
         raw_branch = data.pop("branch")
-        ml_branch = domain_mapping.get(raw_branch, "CSE") # Fallback cleanly
-        
+        ml_branch = domain_mapping.get(raw_branch, "CSE")
+
         data["branch_encoded"] = int(le.transform([ml_branch])[0])
 
         X = pd.DataFrame([data])[features]
         X_s = scaler.transform(X)
         prob = float(model.predict_proba(X_s)[0][1])
 
-        # SHAP explanation
-        shap_vals = explainer.shap_values(X_s)[0]
+        # SHAP explanation — handle both single-array and per-class return formats
+        raw_shap = explainer.shap_values(X_s)
+        if isinstance(raw_shap, list):
+            # Multi-class output: use class 1 (placed) values
+            shap_vals = raw_shap[1][0] if len(raw_shap) > 1 else raw_shap[0][0]
+        else:
+            # Single array output (binary shorthand)
+            shap_vals = raw_shap[0]
         top_factors = sorted(
             [{"feature": f.replace("_", " ").title(), "impact": round(float(v), 4)}
              for f, v in zip(features, shap_vals)],
@@ -142,14 +150,19 @@ async def predict_placement(req: PlacementRequest, user=Depends(get_current_user
 
         verdict = "High" if prob >= 0.70 else ("Moderate" if prob >= 0.40 else "Low")
 
+        msg_factor = ""
+        if top_factors:
+            top = top_factors[0]
+            if top["impact"] > 0:
+                msg_factor = f"Your strongest advantage is {top['feature']}."
+            else:
+                msg_factor = f"Your biggest area for improvement is {top['feature']}."
+
         return {
             "placement_probability": round(prob * 100, 1),
             "verdict": verdict,
             "top_factors": top_factors,
-            "message": (
-                f"You have a {round(prob * 100, 1)}% chance of getting placed. "
-                f"Your top factor is {top_factors[0]['feature']}."
-            )
+            "message": f"You have a {round(prob * 100, 1)}% chance of getting placed. {msg_factor}".strip()
         }
     except HTTPException:
         raise
@@ -267,7 +280,7 @@ async def save_insights(req: SaveInsightsRequest, user=Depends(get_current_user)
 
         # Check existing
         existing = supabase.table("ai_insights").select("id").eq("user_id", user_id).execute()
-        
+
         from datetime import datetime
         update_data["updated_at"] = datetime.utcnow().isoformat()
 
@@ -288,7 +301,7 @@ async def get_cached_insights(user=Depends(get_current_user)):
         user_id = str(user.id) if hasattr(user, "id") else None
         if not user_id or not supabase:
             return {"cached": False}
-        
+
         res = supabase.table("ai_insights").select("*").eq("user_id", user_id).execute()
         if res.data:
             return {"cached": True, "data": res.data[0]}

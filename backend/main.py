@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,9 +35,10 @@ app = FastAPI(
 )
 
 # ================= CORS =================
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Open for local WiFi demos — restrict in production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -96,15 +99,21 @@ def root():
             "Authentication",
             "Student Portal",
             "Company Portal",
-            "Resume Analyzer",
-            "Resume Builder",
+            "Resume Analyzer & Builder",
             "AI Bullet Improvement",
-            "Job Match Scoring",
             "ATS Score Engine",
+            "Resume Tailoring",
             "Skill Gap Analysis",
             "Mock Interview",
             "Learning Roadmap",
-            "Job Board",
-            "Applications"
+            "Job Board & Applications",
+            "Tracked Applications (Kanban)",
+            "Code Runner",
+            "Domain Switch",
+            "Placement Analytics",
+            "ML Predictions (AI Insights)",
+            "Coding Profile Aggregator",
+            "Smart Daily Plan",
+            "Mentorix Chatbot",
         ]
     }

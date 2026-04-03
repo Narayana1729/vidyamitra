@@ -143,9 +143,9 @@ export default function DailyPlan() {
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 
   const handleComplete = async (taskId) => {
-    const newCompleted = completedTasks.includes(taskId)
-      ? completedTasks.filter(id => id !== taskId)
-      : [...completedTasks, taskId];
+    // Only allow completing (not un-completing), matching backend behavior
+    if (completedTasks.includes(taskId)) return;
+    const newCompleted = [...completedTasks, taskId];
     setCompletedTasks(newCompleted);
 
     try {
@@ -154,7 +154,9 @@ export default function DailyPlan() {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 5000,
       });
-    } catch { }
+    } catch (err) {
+      console.error('Task complete failed:', err);
+    }
   };
 
   const handleSaveGoal = async (goal, deadline) => {

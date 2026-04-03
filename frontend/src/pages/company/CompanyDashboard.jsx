@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Users, Briefcase, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function CompanyDashboard() {
   const { user } = useAuth();
@@ -13,7 +13,7 @@ export default function CompanyDashboard() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('vm_token');
-        const jobsRes = await axios.get(`${API}/jobs/company/mine`, {
+        const jobsRes = await axios.get(`${API}/api/jobs/company/mine`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const myJobs = jobsRes.data.jobs || [];

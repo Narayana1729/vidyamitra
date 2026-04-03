@@ -31,10 +31,24 @@ async def get_daily_plan(
     Returns cached plan if already generated today (unless refresh=true).
     """
     user_id = str(user.id) if hasattr(user, "id") else None
-    
+
+    # Try user_metadata first, then fall back to profiles table
     metadata = getattr(user, "user_metadata", {}) or {}
-    name = metadata.get("full_name", metadata.get("name", "Student")) if metadata else "Student"
-    
+    name = metadata.get("full_name", metadata.get("name", "")) if metadata else ""
+
+    if not name and user_id:
+        try:
+            from db.supabase_client import supabase
+            if supabase:
+                profile = supabase.table("profiles").select("full_name").eq("id", user_id).maybe_single().execute()
+                if profile.data and profile.data.get("full_name"):
+                    name = profile.data["full_name"]
+        except Exception:
+            pass
+
+    if not name:
+        name = "Student"
+
     if isinstance(name, str) and name:
         name = name.split()[0]  # First name only
 

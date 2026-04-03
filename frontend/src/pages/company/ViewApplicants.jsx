@@ -4,7 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, User, Mail, Award, CheckCircle, XCircle, Clock } from 'lucide-react';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function ViewApplicants() {
   const { jobId } = useParams();
@@ -25,7 +25,7 @@ export default function ViewApplicants() {
       const token = localStorage.getItem('vm_token');
       
       // Fetch Job Details
-      const jobRes = await axios.get(`${API}/jobs/${jobId}`);
+      const jobRes = await axios.get(`${API}/api/jobs/${jobId}`);
       setJob(jobRes.data.job);
 
       // Fetch Applicants
@@ -33,7 +33,7 @@ export default function ViewApplicants() {
       if (statusFilter) params.status = statusFilter;
       if (minScore) params.min_score = minScore;
 
-      const appRes = await axios.get(`${API}/applications/job/${jobId}`, {
+      const appRes = await axios.get(`${API}/api/applications/job/${jobId}`, {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -49,7 +49,7 @@ export default function ViewApplicants() {
   const handleUpdateStatus = async (appId, newStatus) => {
     try {
       const token = localStorage.getItem('vm_token');
-      await axios.patch(`${API}/applications/${appId}/status`, { status: newStatus }, {
+      await axios.patch(`${API}/api/applications/${appId}/status`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setApplicants(applicants.map(a => a.id === appId ? { ...a, status: newStatus } : a));

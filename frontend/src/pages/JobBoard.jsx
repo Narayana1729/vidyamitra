@@ -6,7 +6,7 @@ import { Search, MapPin, Briefcase, CheckCircle, ExternalLink, TrendingUp, Trend
 import { useAuth } from '../context/AuthContext';
 import { getDomainData } from '../utils/domainData';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ── Market Trend Data ──
 // These are dynamically loaded inside the component based on user domain
@@ -44,16 +44,22 @@ export default function JobBoard() {
   const [mockInterviewData, setMockInterviewData] = useState(null);
 
   useEffect(() => {
-    fetchJobs();
-    fetchMyApps();
+    const debounceTimer = setTimeout(() => {
+      fetchJobs();
+    }, 400);
+    return () => clearTimeout(debounceTimer);
   }, [search]);
+
+  useEffect(() => {
+    fetchMyApps();
+  }, []);
 
   const fetchJobs = async () => {
     try {
       // Fetch internal and external jobs in parallel
       const [internalRes, externalRes] = await Promise.allSettled([
-        axios.get(`${API}/jobs`, { params: { search } }),
-        axios.get(`${API}/jobs/external`, { params: { search } })
+        axios.get(`${API}/api/jobs`, { params: { search } }),
+        axios.get(`${API}/api/jobs/external`, { params: { search } })
       ]);
 
       let fetchedJobs = [];
@@ -72,7 +78,9 @@ export default function JobBoard() {
       try {
         const cached = localStorage.getItem(`vidyamitra_skillgap_skills_${uid}`);
         if (cached) userSkills = JSON.parse(cached).map(s => s.toLowerCase());
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Failed to parse cached skills:', e);
+      }
 
       // Calculate match score
       const jobsWithScores = fetchedJobs.map(job => {
@@ -99,7 +107,7 @@ export default function JobBoard() {
   const fetchMyApps = async () => {
     try {
       const token = localStorage.getItem('vm_token');
-      const res = await axios.get(`${API}/applications/student/mine`, {
+      const res = await axios.get(`${API}/api/applications/student/mine`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const ids = new Set((res.data.applications || []).map(a => a.job_id));
@@ -113,7 +121,7 @@ export default function JobBoard() {
     setApplying(true);
     try {
       const token = localStorage.getItem('vm_token');
-      await axios.post(`${API}/applications`, { job_id: jobId }, {
+      await axios.post(`${API}/api/applications`, { job_id: jobId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAppliedJobs(prev => new Set(prev).add(jobId));
@@ -128,7 +136,7 @@ export default function JobBoard() {
   const handleMockInterview = async (job) => {
     setGeneratingMock(job.id);
     try {
-      const res = await axios.post(`${API}/jobs/mock-interview`, {
+      const res = await axios.post(`${API}/api/jobs/mock-interview`, {
         job_title: job.title,
         job_description: job.description || "",
         skills_required: job.skills_required || [],
@@ -407,6 +415,19 @@ export default function JobBoard() {
 
       {loading ? (
         <div className="loading-state">Loading jobs...</div>
+      ) : jobs.length === 0 ? (
+        <div className="glass-card" style={{ textAlign: 'center', padding: 48 }}>
+          <Briefcase size={48} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No Jobs Found</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+            {search ? `No jobs matching "${search}". Try a different search term.` : 'No job postings available right now. Check back soon!'}
+          </p>
+          {search && (
+            <button className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => setSearch('')}>
+              Clear Search
+            </button>
+          )}
+        </div>
       ) : (
         <div className="grid-3">
           {jobs.map((job) => {
@@ -510,8 +531,9 @@ export default function JobBoard() {
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
-        }}>
+        }} onClick={() => setActiveJob(null)}>
           <motion.div
+            onClick={e => e.stopPropagation()}
             className="glass-card"
             style={{ width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto', padding: '32px' }}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -591,12 +613,13 @@ export default function JobBoard() {
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 110,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
-        }}>
+        }} onClick={() => setMockInterviewData(null)}>
           <motion.div
             className="glass-card"
             style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', padding: '32px' }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>

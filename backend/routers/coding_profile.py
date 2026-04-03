@@ -3,7 +3,7 @@ Coding Profile Router — Unified Coding Profile Aggregator.
 Fetches and caches coding profiles from LeetCode, Codeforces, GitHub, HackerRank.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -29,8 +29,20 @@ class HandlesRequest(BaseModel):
     hackerrank: Optional[str] = ""
 
 
+def _save_coding_profile_bg(cache_data: dict, user_id: str):
+    """Background task to save/upsert coding profile data."""
+    try:
+        if supabase:
+            # Use upsert to atomically insert-or-update, avoiding race conditions
+            supabase.table("coding_profiles").upsert(
+                cache_data, on_conflict="user_id"
+            ).execute()
+    except Exception as e:
+        print(f"[CodingProfile] Cache save failed (background): {e}")
+
+
 @router.post("/fetch")
-async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_user)):
+async def fetch_coding_profile(req: ProfileRequest, background_tasks: BackgroundTasks, user=Depends(get_current_user)):
     """Fetch coding profiles from all platforms in parallel (~3-5 seconds)."""
     if not any([req.leetcode, req.codeforces, req.github, req.hackerrank]):
         raise HTTPException(status_code=400, detail="Provide at least one platform username.")
@@ -42,10 +54,10 @@ async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_use
         hackerrank_username=req.hackerrank,
     )
 
-    # Cache to Supabase
+    # Cache to Supabase continuously via BackgroundTasks
     try:
         user_id = str(user.id) if hasattr(user, "id") else None
-        if user_id and supabase:
+        if user_id:
             cache_data = {
                 "user_id": user_id,
                 "leetcode_username": req.leetcode or "",
@@ -53,17 +65,25 @@ async def fetch_coding_profile(req: ProfileRequest, user=Depends(get_current_use
                 "github_username": req.github or "",
                 "hackerrank_username": req.hackerrank or "",
                 "profile_data": result,
-                "coding_score": result.get("computed", {}).get("coding_score", 0),
+                "coding_score": int(result.get("computed", {}).get("coding_score", 0)),
                 "updated_at": datetime.utcnow().isoformat(),
             }
-            # Upsert (delete old + insert new)
-            try:
-                supabase.table("coding_profiles").delete().eq("user_id", user_id).execute()
-            except:
-                pass
-            save_to_supabase("coding_profiles", cache_data)
+            # Add to background tasks
+            background_tasks.add_task(_save_coding_profile_bg, cache_data, user_id)
+            
+            # Log activity
+            background_tasks.add_task(
+                save_to_supabase,
+                "activity_log",
+                {
+                    "user_id": user_id,
+                    "activity_type": "coding_profile_update",
+                    "action": f"Updated coding profiles, new computed score is {cache_data['coding_score']}",
+                    "metadata": {"coding_score": cache_data["coding_score"]}
+                }
+            )
     except Exception as e:
-        print(f"[CodingProfile] Cache save failed (non-blocking): {e}")
+        print(f"[CodingProfile] Cache task failed to queue: {e}")
 
     return result
 

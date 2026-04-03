@@ -6,7 +6,10 @@ import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
+
+load_dotenv()
 
 router = APIRouter()
 

@@ -44,7 +44,7 @@ def _fetch_student_context(user_id: str) -> dict:
         sk = supabase.table("skill_analyses").select("match_percentage, missing_skills, matched_skills").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
         if sk.data:
             context["skill_match"] = sk.data[0].get("match_percentage", 0)
-            
+
             def _clean_skills(items):
                 if not isinstance(items, list): return []
                 res = []

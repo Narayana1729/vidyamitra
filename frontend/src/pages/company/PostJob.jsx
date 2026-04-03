@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Briefcase, MapPin, DollarSign, List, ArrowRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function PostJob() {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export default function PostJob() {
 
     try {
       const token = localStorage.getItem('vm_token');
-      await axios.post(`${API}/jobs`, {
+      await axios.post(`${API}/api/jobs`, {
         ...formData,
         skills_required: skills,
       }, {

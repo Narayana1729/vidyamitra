@@ -82,14 +82,14 @@ def generate_resume_html(data: ResumeBuilderRequest) -> str:
 
     exp_html = ""
     for exp in data.experience:
-        points = "".join(f"<li>{p}</li>" for p in exp.get("points", []) if p.strip())
+        points = "".join(f"<li>{_e(p)}</li>" for p in exp.get("points", []) if p.strip())
         exp_html += f"""
         <div class="section-item">
             <div class="item-header">
-                <strong>{exp.get('title', '')}</strong>
-                <span class="item-date">{exp.get('duration', '')}</span>
+                <strong>{_e(exp.get('title', ''))}</strong>
+                <span class="item-date">{_e(exp.get('duration', ''))}</span>
             </div>
-            <div class="item-sub">{exp.get('company', '')}</div>
+            <div class="item-sub">{_e(exp.get('company', ''))}</div>
             {"<ul>" + points + "</ul>" if points else ""}
         </div>"""
 
@@ -98,19 +98,19 @@ def generate_resume_html(data: ResumeBuilderRequest) -> str:
         edu_html += f"""
         <div class="section-item">
             <div class="item-header">
-                <strong>{edu.get('degree', '')}</strong>
-                <span class="item-date">{edu.get('year', '')}</span>
+                <strong>{_e(edu.get('degree', ''))}</strong>
+                <span class="item-date">{_e(edu.get('year', ''))}</span>
             </div>
-            <div class="item-sub">{edu.get('institution', '')}</div>
+            <div class="item-sub">{_e(edu.get('institution', ''))}</div>
         </div>"""
 
     proj_html = ""
     for proj in data.projects:
         proj_html += f"""
         <div class="section-item">
-            <strong>{proj.get('name', '')}</strong>
-            {"<span class='item-tech'>" + proj.get('tech', '') + "</span>" if proj.get('tech') else ""}
-            <p>{proj.get('description', '')}</p>
+            <strong>{_e(proj.get('name', ''))}</strong>
+            {"<span class='item-tech'>" + _e(proj.get('tech', '')) + "</span>" if proj.get('tech') else ""}
+            <p>{_e(proj.get('description', ''))}</p>
         </div>"""
 
     # ── Build sections HTML ──
