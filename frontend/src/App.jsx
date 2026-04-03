@@ -11,7 +11,7 @@ import Signup from './pages/Signup';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import SkillGap from './pages/SkillGap';
 import LearningRoadmap from './pages/LearningRoadmap';
-import GatePrep from './pages/GatePrep';
+import HigherStudies from './pages/HigherStudies';
 import MockInterview from './pages/MockInterview';
 import Dashboard from './pages/Dashboard';
 import JobBoard from './pages/JobBoard';
@@ -41,7 +41,7 @@ function StudentLayout() {
           <Route path="/resume" element={<ProtectedRoute requiredRole="student"><ResumeAnalyzer /></ProtectedRoute>} />
           <Route path="/skills" element={<ProtectedRoute requiredRole="student"><SkillGap /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute requiredRole="student"><LearningRoadmap /></ProtectedRoute>} />
-          <Route path="/gate-prep" element={<ProtectedRoute requiredRole="student"><GatePrep /></ProtectedRoute>} />
+          <Route path="/higher-studies" element={<ProtectedRoute requiredRole="student"><HigherStudies /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute requiredRole="student"><MockInterview /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute requiredRole="student"><JobBoard /></ProtectedRoute>} />
           <Route path="/applications" element={<ProtectedRoute requiredRole="student"><MyApplications /></ProtectedRoute>} />

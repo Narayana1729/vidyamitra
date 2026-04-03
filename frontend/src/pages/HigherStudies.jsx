@@ -5,14 +5,17 @@ import {
   BarChart3, ExternalLink, Play, CheckCircle2, XCircle, Timer, Award,
   TrendingUp, Target, Lightbulb, Link2, Calendar, Info, AlertCircle,
   RotateCcw, ArrowRight, Sparkles, BookMarked, Youtube, Check, ListOrdered,
+  Cpu, Banknote, Train, Microscope, Globe, Briefcase, ClipboardList
 } from 'lucide-react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { GATE_EXAM_INFO, GATE_PLATFORMS, GATE_BRANCHES, STUDY_PHASES,
+import { GATE_EXAM_INFO, GATE_PLATFORMS, GATE_BRANCHES, STUDY_PHASES as GATE_STUDY_PHASES,
   getBranchFromDomain } from '../utils/gateData';
-
+import { UPSC_EXAM_INFO, UPSC_PLATFORMS, UPSC_BRANCHES, UPSC_STUDY_PHASES } from '../utils/upscData';
+import { CAT_EXAM_INFO, CAT_BRANCHES, CAT_STUDY_PHASES } from '../utils/mbaData';
+import { MASTERS_EXAM_INFO, MASTERS_BRANCHES, MASTERS_STUDY_PHASES } from '../utils/mastersData';
 const TABS = [
   { id: 'overview', label: 'Exam Overview', icon: Info },
   { id: 'subjects', label: 'Subjects & Syllabus', icon: BookOpen },
@@ -22,8 +25,7 @@ const TABS = [
   { id: 'resources', label: 'Resources', icon: Link2 },
 ];
 
-const storageKey = (uid, key) => `gate_${key}_${uid}`;
-
+const storageKey = (uid, prefix, key) => `${prefix}_${key}_${uid}`;
 // ─────────────── TAB BAR ───────────────
 const TabBar = ({ active, setActive }) => (
   <div className="gate-tabs">
@@ -37,8 +39,7 @@ const TabBar = ({ active, setActive }) => (
 );
 
 // ─────────────── EXAM OVERVIEW ───────────────
-const ExamOverview = () => {
-  const info = GATE_EXAM_INFO;
+const ExamOverview = ({ info }) => {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       {/* Exam Banner */}
@@ -137,7 +138,7 @@ const ExamOverview = () => {
 };
 
 // ─────────────── SUBJECTS & SYLLABUS ───────────────
-const SubjectsView = ({ subjects }) => {
+const SubjectsView = ({ subjects, studyPhases }) => {
   const [expanded, setExpanded] = useState(null);
   const sorted = [...subjects].sort((a, b) => b.weightage - a.weightage);
   return (
@@ -186,7 +187,7 @@ const SubjectsView = ({ subjects }) => {
                         </div>
                       ))}
                       <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-                        ⏱️ Recommended study time: <strong>{sub.studyWeeks} weeks</strong> · Phase {sub.phase}: {STUDY_PHASES[sub.phase - 1]?.name}
+                        ⏱️ Recommended study time: <strong>{sub.studyWeeks} weeks</strong> · Phase {sub.phase}: {studyPhases?.find(p => p.id === sub.phase)?.name || ''}
                       </div>
                     </div>
                   </motion.div>
@@ -201,10 +202,10 @@ const SubjectsView = ({ subjects }) => {
 };
 
 // ─────────────── STUDY ROADMAP ───────────────
-const StudyRoadmap = ({ subjects, uid }) => {
+const StudyRoadmap = ({ subjects, uid, studyPhases, storagePrefix }) => {
   const [prefs, setPrefs] = useState(() => {
     try {
-      const saved = localStorage.getItem(storageKey(uid, 'roadmap_prefs'));
+      const saved = localStorage.getItem(storageKey(uid, storagePrefix, 'roadmap_prefs'));
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -256,7 +257,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
           }
       };
       setPrefs(newPrefs);
-      localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(newPrefs));
+      localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(newPrefs));
       setSwapSource(null);
   };
 
@@ -269,11 +270,11 @@ const StudyRoadmap = ({ subjects, uid }) => {
     const updatedPrefs = { ...prefs, topicDays: newTopicDays };
     setPrefs(updatedPrefs);
     setQAnswers(q => ({ ...q, topicDays: newTopicDays }));
-    localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(updatedPrefs));
+    localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(updatedPrefs));
   };
 
   const handleSave = () => {
-    localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(qAnswers));
+    localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(qAnswers));
     setPrefs(qAnswers);
     setIsQuestionnaire(false);
   };
@@ -285,7 +286,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
         ? [...new Set([...current, topic])]
         : current.filter(t => t !== topic);
       const nextQAnswers = { ...prev, completedTopics: { ...prev.completedTopics, [subId]: updated } };
-      localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify(nextQAnswers));
+      localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify(nextQAnswers));
       return nextQAnswers;
     });
   };
@@ -475,7 +476,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
   let overallCompletedTopics = 0;
   let overallTotalTopics = 0;
 
-  const phases = STUDY_PHASES.map(p => ({
+  const phases = studyPhases ? studyPhases.map(p => ({
     ...p, 
     subjects: subjects.filter(s => s.phase === p.id).sort((a, b) => a.order - b.order).map(s => {
       const totalTopics = s.topics ? s.topics.length : 0;
@@ -490,7 +491,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
       }
       return { ...s, isCompleted, completionRatio: ratio };
     })
-  }));
+  })) : [];
 
   const globalCompletionPct = overallTotalTopics > 0 ? Math.round((overallCompletedTopics / overallTotalTopics) * 100) : 0;
 
@@ -505,7 +506,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
       [newOrder[idx + 1], newOrder[idx]] = [newOrder[idx], newOrder[idx + 1]];
     }
     setPrefs(p => ({ ...p, customOrder: newOrder }));
-    localStorage.setItem(storageKey(uid, 'roadmap_prefs'), JSON.stringify({...prefs, customOrder: newOrder}));
+    localStorage.setItem(storageKey(uid, storagePrefix, 'roadmap_prefs'), JSON.stringify({...prefs, customOrder: newOrder}));
   };
 
   // FEASIBILITY ENGINE
@@ -605,6 +606,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
                  const interleavedSchedule = [];
                  let seed = parseInt(phase.id) * 1000 || 1234;
                  let lastSubId = null;
+                 const counters = {};
                  
                  while (activeSubjects.length > 0) {
                      // Find available candidates avoiding the last chosen subject if possible
@@ -917,7 +919,7 @@ const StudyRoadmap = ({ subjects, uid }) => {
 // ─────────────── MOCK QUIZ ───────────────
 const QUIZ_TIME_PER_Q = 45; // seconds
 
-const MockQuiz = ({ subjects, uid }) => {
+const MockQuiz = ({ subjects, uid, storagePrefix }) => {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -957,7 +959,7 @@ const MockQuiz = ({ subjects, uid }) => {
       date: new Date().toISOString(),
     };
     // Save to localStorage
-    const key = storageKey(uid, 'quiz_history');
+    const key = storageKey(uid, storagePrefix, 'quiz_history');
     const history = JSON.parse(localStorage.getItem(key) || '[]');
     history.push(result);
     localStorage.setItem(key, JSON.stringify(history));
@@ -1100,9 +1102,8 @@ const MockQuiz = ({ subjects, uid }) => {
 };
 
 // ─────────────── PERFORMANCE ───────────────
-const PerformanceView = ({ uid, subjects }) => {
-  const key = storageKey(uid, 'quiz_history');
-  const history = JSON.parse(localStorage.getItem(key) || '[]');
+const PerformanceView = ({ uid, subjects, storagePrefix }) => {
+  const history = JSON.parse(localStorage.getItem(storageKey(uid, storagePrefix, 'quiz_history')) || '[]');
 
   if (history.length === 0) {
     return (
@@ -1158,7 +1159,7 @@ const PerformanceView = ({ uid, subjects }) => {
           { label: 'Quizzes Taken', value: history.length, icon: <FileText size={20} />, color: 'var(--accent-primary)' },
           { label: 'Average Score', value: `${Math.round(history.reduce((a, h) => a + h.pct, 0) / history.length)}%`, icon: <Target size={20} />, color: 'var(--cyan)' },
           { label: 'Best Score', value: `${Math.max(...history.map(h => h.pct))}%`, icon: <Award size={20} />, color: 'var(--emerald)' },
-          { label: 'Predicted GATE', value: `~${predictedGate}/100`, icon: <TrendingUp size={20} />, color: 'var(--amber)' },
+          { label: 'Predicted Score', value: `~${predictedGate}`, icon: <TrendingUp size={20} />, color: 'var(--amber)' },
         ].map((s, i) => (
           <div key={i} className="glass-card glass-card-sm" style={{ textAlign: 'center' }}>
             <div style={{ color: s.color, marginBottom: 8 }}>{s.icon}</div>
@@ -1257,7 +1258,7 @@ const PerformanceView = ({ uid, subjects }) => {
                   : '• Strengthen fundamentals first. Watch NPTEL lectures for weak subjects before attempting more quizzes.'}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
-                • Predicted GATE score: <strong style={{ color: 'var(--accent-primary)' }}>~{predictedGate} marks</strong> (based on recent {recentScores.length} attempts)
+                • Predicted mock score: <strong style={{ color: 'var(--accent-primary)' }}>~{predictedGate} marks</strong> (based on recent {recentScores.length} attempts)
               </div>
             </div>
           </div>
@@ -1268,8 +1269,7 @@ const PerformanceView = ({ uid, subjects }) => {
 };
 
 // ─────────────── RESOURCES ───────────────
-const ResourcesView = ({ branch }) => {
-  const branchData = GATE_BRANCHES[branch];
+const ResourcesView = ({ branchData, platforms }) => {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       {/* Platforms */}
@@ -1277,7 +1277,7 @@ const ResourcesView = ({ branch }) => {
         🎓 Learning Platforms
       </h3>
       <div className="grid-2" style={{ gap: 16, marginBottom: 32 }}>
-        {GATE_PLATFORMS.map((p, i) => (
+        {platforms && platforms.map((p, i) => (
           <a key={i} href={p.url} target="_blank" rel="noopener noreferrer"
             className="glass-card" style={{ textDecoration: 'none', color: 'var(--text-primary)', display: 'flex', gap: 14, alignItems: 'center' }}>
             <span style={{ fontSize: 28 }}>{p.icon}</span>
@@ -1317,9 +1317,9 @@ const ResourcesView = ({ branch }) => {
           Solving previous year GATE papers is the most effective strategy. Access them on:
         </p>
         {[
-          { name: 'GATE Overflow — Community Solutions', url: 'https://gateoverflow.in/' },
-          { name: 'GATE Official Website — Past Papers', url: 'https://gate2025.iitr.ac.in/' },
-          { name: 'GeeksforGeeks — Year-wise Solutions', url: 'https://www.geeksforgeeks.org/gate-cs-notes-gq/' },
+          { name: 'Study IQ', url: 'https://studyiq.com' },
+          { name: 'Unacademy', url: 'https://unacademy.com' },
+          { name: 'GeeksforGeeks', url: 'https://geeksforgeeks.org' }
         ].map((link, i) => (
           <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-glass)',
@@ -1334,24 +1334,29 @@ const ResourcesView = ({ branch }) => {
 };
 
 // ─────────────── MAIN COMPONENT ───────────────
-export default function GatePrep() {
+const StudyTrackModule = ({ onBack, examInfo, platforms, branches, studyPhases, storagePrefix }) => {
   const { user } = useAuth();
   const uid = user?.id || 'anon';
-  const detectedBranch = getBranchFromDomain(user?.domain);
-  const [branch, setBranch] = useState(detectedBranch);
+  
+  const branchOptions = Object.entries(branches).map(([code, data]) => ({ code, name: data.name }));
+  const [branch, setBranch] = useState(branchOptions[0]?.code);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const branchData = GATE_BRANCHES[branch];
+  const branchData = branches[branch];
   const subjects = branchData?.subjects || [];
-  const branchOptions = Object.entries(GATE_BRANCHES).map(([code, data]) => ({ code, name: data.name }));
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div style={{ marginBottom: 24 }}>
+         <button className="btn btn-ghost" onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px' }}>
+           ← Back to Command Center
+         </button>
+      </div>
       <div className="page-header" style={{ textAlign: 'center', marginBottom: 32 }}>
         <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <GraduationCap size={36} color="var(--accent-primary)" /> GATE Preparation
+          <GraduationCap size={36} color="var(--accent-primary)" /> {examInfo?.name} Preparation
         </h1>
-        <p>Comprehensive GATE prep — syllabus, roadmap, quizzes, analytics & resources</p>
+        <p>Comprehensive prep — syllabus, roadmap, quizzes, analytics & resources</p>
       </div>
 
       {/* Branch Selector */}
@@ -1359,7 +1364,7 @@ export default function GatePrep() {
         <select className="select" value={branch} onChange={e => setBranch(e.target.value)}
           style={{ textAlign: 'center', fontWeight: 600 }}>
           {branchOptions.map(b => (
-            <option key={b.code} value={b.code}>GATE {b.code} — {b.name}</option>
+            <option key={b.code} value={b.code}>{b.code} — {b.name}</option>
           ))}
         </select>
       </div>
@@ -1368,13 +1373,115 @@ export default function GatePrep() {
 
       <div style={{ marginTop: 24 }}>
         <AnimatePresence mode="wait">
-          {activeTab === 'overview' && <ExamOverview key="overview" />}
-          {activeTab === 'subjects' && <SubjectsView key="subjects" subjects={subjects} />}
-          {activeTab === 'roadmap' && <StudyRoadmap key="roadmap" subjects={subjects} />}
-          {activeTab === 'quiz' && <MockQuiz key="quiz" subjects={subjects} uid={uid} />}
-          {activeTab === 'performance' && <PerformanceView key="performance" uid={uid} subjects={subjects} />}
-          {activeTab === 'resources' && <ResourcesView key="resources" branch={branch} />}
+          {activeTab === 'overview' && <ExamOverview key="overview" info={examInfo} />}
+          {activeTab === 'subjects' && <SubjectsView key="subjects" subjects={subjects} studyPhases={studyPhases} />}
+          {activeTab === 'roadmap' && <StudyRoadmap key="roadmap" subjects={subjects} uid={uid} studyPhases={studyPhases} storagePrefix={storagePrefix} />}
+          {activeTab === 'quiz' && <MockQuiz key="quiz" subjects={subjects} uid={uid} storagePrefix={storagePrefix} />}
+          {activeTab === 'performance' && <PerformanceView key="performance" uid={uid} subjects={subjects} storagePrefix={storagePrefix} />}
+          {activeTab === 'resources' && <ResourcesView key="resources" branchData={branchData} platforms={platforms} />}
         </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
+
+// ─────────────── COMMAND CENTER HUB ───────────────
+const TRACKS = [
+  { id: 'MASTERS', title: 'Masters (MS/MA/MSc)', desc: 'Global Universities, GRE, TOEFL', icon: <GraduationCap size={24} />, color: 'var(--cyan)' },
+  { id: 'UPSC', title: 'UPSC Civil Services', desc: 'Prelims, Mains, Interview', icon: <Map size={24} />, color: 'var(--amber)' },
+  { id: 'GATE', title: 'M.Tech / GATE', desc: 'IISc, IITs, NITs, PSU Predictor', icon: <Cpu size={24} />, color: 'var(--rose)' },
+  { id: 'MBA', title: 'MBA / CAT', desc: 'IIMs, Top B-Schools, Specializations', icon: <Briefcase size={24} />, color: 'var(--emerald)' },
+  { id: 'GROUPS', title: 'Groups & Gov Exams', desc: 'Central + State + PSU', icon: <ClipboardList size={24} />, color: '#3b82f6' },
+  { id: 'BANKING', title: 'Banking Exams', desc: 'IBPS, SBI, RBI', icon: <Banknote size={24} />, color: '#10b981' },
+  { id: 'RAILWAYS', title: 'Railways', desc: 'RRB NTPC, Group D, ALP', icon: <Train size={24} />, color: '#8b5cf6' },
+  { id: 'NEET', title: 'NEET PG / Research', desc: 'PhD, JRF, NET', icon: <Microscope size={24} />, color: '#14b8a6' },
+  { id: 'ABROAD', title: 'Study Abroad', desc: 'GRE, GMAT, IELTS, TOEFL', icon: <Globe size={24} />, color: '#d946ef' },
+];
+
+export default function HigherStudies() {
+  const [selectedTrack, setSelectedTrack] = useState(null);
+
+  const renderModule = () => {
+    switch (selectedTrack) {
+       case 'GATE': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={GATE_EXAM_INFO} platforms={GATE_PLATFORMS} branches={GATE_BRANCHES} studyPhases={GATE_STUDY_PHASES} storagePrefix="gate" />;
+       case 'UPSC': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={UPSC_EXAM_INFO} platforms={UPSC_PLATFORMS} branches={UPSC_BRANCHES} studyPhases={UPSC_STUDY_PHASES} storagePrefix="upsc" />;
+       case 'MBA': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={CAT_EXAM_INFO} platforms={[]} branches={CAT_BRANCHES} studyPhases={CAT_STUDY_PHASES} storagePrefix="mba" />;
+       case 'MASTERS': return <StudyTrackModule onBack={() => setSelectedTrack(null)} examInfo={MASTERS_EXAM_INFO} platforms={[]} branches={MASTERS_BRANCHES} studyPhases={MASTERS_STUDY_PHASES} storagePrefix="masters" />;
+       case null: return null;
+       default: return (
+           <div style={{ padding: 60, textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                   <Timer size={32} color="var(--accent-primary)" />
+              </div>
+              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16 }}>{selectedTrack} Module</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 16, maxWidth: 400, margin: '0 auto 32px' }}>
+                This command center module is currently being calibrated. The neuro-link to our servers will be established shortly. 🚧
+              </p>
+              <button className="btn btn-secondary" onClick={() => setSelectedTrack(null)}>← Back to Hub</button>
+           </div>
+       );
+    }
+  };
+
+  if (selectedTrack) {
+     return renderModule();
+  }
+
+  return (
+    <div style={{ padding: '0px 0px 40px', color: '#fff' }}>
+      <div style={{ textAlign: 'center', marginBottom: 48 }}>
+        <h1 style={{ 
+          fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, 
+          letterSpacing: -1, marginBottom: 16,
+          background: 'linear-gradient(to right, #38bdf8, #818cf8, #c084fc)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          position: 'relative', display: 'inline-block'
+        }}>
+          Higher Studies Command Center
+        </h1>
+        <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 600, margin: '0 auto' }}>
+          Your ultimate control room for advanced prep. Select your trajectory to generate ultra-customized roadmaps, syllabus analytics, and mock test servers.
+        </p>
+      </div>
+
+      <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20,
+      }}>
+        {TRACKS.map((track, i) => (
+          <motion.div key={track.id}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            whileHover={{ y: -6, scale: 1.02 }}
+            onClick={() => setSelectedTrack(track.id)}
+            style={{
+              padding: 24, borderRadius: 16, cursor: 'pointer',
+              background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(12px)',
+              border: `1px solid ${track.color}40`,
+              boxShadow: `0 4px 24px ${track.color}15, inset 0 0 0 1px rgba(255,255,255,0.05)`,
+              display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{
+               position: 'absolute', top: -50, right: -50, width: 100, height: 100,
+               background: track.color, filter: 'blur(50px)', opacity: 0.2
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+               <div style={{
+                  width: 48, height: 48, borderRadius: 12, background: `color-mix(in srgb, ${track.color} 20%, transparent)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: track.color, flexShrink: 0
+               }}>
+                 {track.icon}
+               </div>
+               <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', color: '#f8fafc', marginBottom: 4 }}>
+                    {track.title}
+                  </h3>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {track.desc}
+                  </div>
+               </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
