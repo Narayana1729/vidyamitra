@@ -195,3 +195,80 @@ CREATE TABLE IF NOT EXISTS tracked_applications (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 11. Coding Profiles
+CREATE TABLE IF NOT EXISTS coding_profiles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    leetcode_username TEXT,
+    codeforces_username TEXT,
+    github_username TEXT,
+    hackerrank_username TEXT,
+    profile_data JSONB DEFAULT '{}',
+    coding_score INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id)
+);
+
+-- 12. AI Insights
+CREATE TABLE IF NOT EXISTS ai_insights (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    placement_probability FLOAT,
+    verdict TEXT,
+    top_factors JSONB DEFAULT '[]',
+    cluster_id INTEGER,
+    archetype TEXT,
+    archetype_emoji TEXT,
+    archetype_description TEXT,
+    best_role TEXT,
+    role_confidence FLOAT,
+    skill_health JSONB DEFAULT '{}',
+    readiness_timeline JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id)
+);
+
+-- 13. Daily Plans
+CREATE TABLE IF NOT EXISTS daily_plans (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    plan_date TEXT NOT NULL,
+    plan_data JSONB DEFAULT '{}',
+    completed_tasks JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, plan_date)
+);
+
+-- 14. User Goals
+CREATE TABLE IF NOT EXISTS user_goals (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    goal TEXT NOT NULL,
+    deadline TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id)
+);
+
+-- 15. Study Progress (persists roadmap prefs, completed topics, tick marks per track)
+CREATE TABLE IF NOT EXISTS study_progress (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    track TEXT NOT NULL,                                      -- 'gate', 'upsc', 'mba', 'masters', etc.
+    progress_data JSONB DEFAULT '{}',                         -- all prefs, completedTopics, struckDays, viewMode, branch, tab
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, track)
+);
+
+-- ============================================================
+-- Additional Indexes for new Phase 7 & AI features
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_tracked_applications_user ON tracked_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_coding_profiles_user ON coding_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_insights_user ON ai_insights(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_user ON daily_plans(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_date ON daily_plans(plan_date);
+CREATE INDEX IF NOT EXISTS idx_user_goals_user ON user_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_study_progress_user ON study_progress(user_id);

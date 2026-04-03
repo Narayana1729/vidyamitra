@@ -10,7 +10,7 @@ const navItems = [
   { to: '/resume', icon: FileText, label: 'Resume Analyzer' },
   { to: '/skills', icon: Brain, label: 'Skill Gap' },
   { to: '/roadmap', icon: Map, label: 'Learning Roadmap' },
-  { to: '/gate-prep', icon: GraduationCap, label: 'GATE Prep' },
+  { to: '/higher-studies', icon: GraduationCap, label: 'Higher Studies' },
   { to: '/interview', icon: Mic, label: 'Mock Interview' },
   { to: '/jobs', icon: Briefcase, label: 'Browse Jobs' },
   { to: '/applications', icon: ClipboardList, label: 'My Applications' },

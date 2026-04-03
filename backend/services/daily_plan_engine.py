@@ -44,8 +44,23 @@ def _fetch_student_context(user_id: str) -> dict:
         sk = supabase.table("skill_analyses").select("match_percentage, missing_skills, matched_skills").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
         if sk.data:
             context["skill_match"] = sk.data[0].get("match_percentage", 0)
-            context["weak_areas"] = sk.data[0].get("missing_skills", [])[:5] if isinstance(sk.data[0].get("missing_skills"), list) else []
-            context["skills"] = sk.data[0].get("matched_skills", [])[:10] if isinstance(sk.data[0].get("matched_skills"), list) else []
+            
+            def extract_skills(skill_list):
+                if not isinstance(skill_list, list): return []
+                res = []
+                for s in skill_list:
+                    if isinstance(s, str): 
+                        res.append(s)
+                    elif isinstance(s, dict): 
+                        # Handle recursive dicts or simple name/skill keys
+                        val = s.get("skill", s.get("name", ""))
+                        if isinstance(val, dict):
+                            val = val.get("name", val.get("skill", str(val)))
+                        res.append(str(val))
+                return [s.strip() for s in res if s and isinstance(s, str)]
+
+            context["weak_areas"] = extract_skills(sk.data[0].get("missing_skills", []))[:5]
+            context["skills"] = extract_skills(sk.data[0].get("matched_skills", []))[:10]
 
         # Latest interview score
         sessions = supabase.table("interview_sessions").select("session_id").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
@@ -92,8 +107,12 @@ def _fetch_student_context(user_id: str) -> dict:
 
 def _build_prompt(ctx: dict, student_name: str = "Student") -> str:
     """Build the LLM prompt for daily plan generation."""
-    weak_str = ", ".join(ctx["weak_areas"][:5]) if ctx["weak_areas"] else "none identified yet"
-    skills_str = ", ".join(ctx["skills"][:8]) if ctx["skills"] else "not analyzed yet"
+    # Defensive casting to str to prevent join errors
+    weak_list = [str(s) for s in ctx.get("weak_areas", [])[:5]]
+    skills_list = [str(s) for s in ctx.get("skills", [])[:8]]
+    
+    weak_str = ", ".join(weak_list) if weak_list else "none identified yet"
+    skills_str = ", ".join(skills_list) if skills_list else "not analyzed yet"
 
     return f"""You are VidyaMitra, an AI career coach. Generate a personalized daily action plan for a student.
 

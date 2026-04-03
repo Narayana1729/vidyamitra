@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, X, Send, Loader2, Sparkles, MessageCircle, Bot } from 'lucide-react';
+import { GraduationCap, X, Send, Loader2, Sparkles, MessageCircle, Bot, Image as ImageIcon } from 'lucide-react';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -11,8 +11,10 @@ export default function MentorixChat() {
     { role: 'assistant', content: 'Hi there! I am Mentorix, your educational assistant. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom of chat
@@ -26,14 +28,26 @@ export default function MentorixChat() {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
-    const userMessage = { role: 'user', content: input.trim() };
+    const userMessage = { role: 'user', content: input.trim(), image: selectedImage };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
+    setSelectedImage(null);
     setIsLoading(true);
 
     try {
@@ -200,8 +214,13 @@ export default function MentorixChat() {
                       boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                       fontFamily: 'var(--font-body)'
                     }}>
+                      {msg.image && (
+                        <div style={{ marginBottom: msg.content ? 8 : 0 }}>
+                          <img src={msg.image} alt="upload" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                        </div>
+                      )}
                       {/* Simple map to render paragraphs split by newline */}
-                      {msg.content.split('\n').map((line, idx) => (
+                      {msg.content && msg.content.split('\n').map((line, idx) => (
                         <span key={idx}>
                           {line}
                           {idx !== msg.content.split('\n').length - 1 && <br />}
@@ -237,51 +256,80 @@ export default function MentorixChat() {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} style={{
-              padding: '16px',
-              background: 'var(--bg-card)',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              gap: '8px'
-            }}>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Mentorix anything..."
-                style={{
-                  flex: 1,
-                  background: 'var(--bg-lighter)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none',
-                  fontFamily: 'var(--font-body)'
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                style={{
-                  background: (!input.trim() || isLoading) ? 'var(--bg-lighter)' : 'var(--accent-primary)',
-                  color: (!input.trim() || isLoading) ? 'var(--text-muted)' : 'white',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: 42,
-                  height: 42,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: (!input.trim() || isLoading) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  flexShrink: 0
-                }}
-              >
-                <Send size={18} style={{ marginLeft: 2 }} />
-              </button>
-            </form>
+            <div style={{ background: 'var(--bg-card)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+              {selectedImage && (
+                <div style={{ padding: '8px 16px', position: 'relative', display: 'inline-block', alignSelf: 'flex-start' }}>
+                  <img src={selectedImage} alt="Preview" style={{ height: 60, borderRadius: 8, border: '1px solid var(--border)' }} />
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    style={{ position: 'absolute', top: 2, right: 10, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', padding: 2, cursor: 'pointer' }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+              <form onSubmit={handleSend} style={{
+                padding: '12px 16px',
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title="Upload Image"
+                >
+                  <ImageIcon size={20} />
+                </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageSelect}
+                />
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask Mentorix anything..."
+                  style={{
+                    flex: 1,
+                    background: 'var(--bg-lighter)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '20px',
+                    padding: '10px 16px',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-body)'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  style={{
+                    background: ((!input.trim() && !selectedImage) || isLoading) ? 'var(--bg-lighter)' : 'var(--accent-primary)',
+                    color: ((!input.trim() && !selectedImage) || isLoading) ? 'var(--text-muted)' : 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: 42,
+                    height: 42,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: ((!input.trim() && !selectedImage) || isLoading) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    flexShrink: 0
+                  }}
+                >
+                  <Send size={18} style={{ marginLeft: 2 }} />
+                </button>
+              </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

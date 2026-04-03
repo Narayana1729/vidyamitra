@@ -40,7 +40,7 @@ export default function TailorResumeModal({
     setResult(null);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("vm_token");
       const res = await fetch(`${API}/api/resume/tailor`, {
         method: "POST",
         headers: {
