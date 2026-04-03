@@ -1,4 +1,6 @@
-# ── Environment & Secrets ──────────────────────────────────────────
+backend/.api_cache/
+*.db-shm
+*.db-wal# ── Environment & Secrets ──────────────────────────────────────────
 .env
 .env.*
 !.env.example

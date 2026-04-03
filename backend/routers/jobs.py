@@ -8,6 +8,7 @@ from typing import Optional, List
 import os
 import httpx
 from db.supabase_client import supabase
+from utils.llm_utils import call_llm_json
 
 router = APIRouter()
 
@@ -22,6 +23,13 @@ class JobCreate(BaseModel):
     job_type: str = "Full-time"
     salary_range: str = ""
     status: str = "active"
+
+
+class MockInterviewRequest(BaseModel):
+    job_title: str
+    job_description: str
+    skills_required: List[str]
+    experience_level: Optional[str] = ""
 
 
 class JobUpdate(BaseModel):
@@ -268,3 +276,56 @@ async def delete_job(job_id: str, authorization: str = Header(...)):
 
     supabase.table("jobs").delete().eq("id", job_id).execute()
     return {"message": "Job deleted"}
+
+
+@router.post("/mock-interview")
+async def generate_mock_interview(body: MockInterviewRequest):
+    prompt = f"""
+Analyze the following job details and generate a structured mock interview tailored to the job.
+
+Job Title: {body.job_title}
+Job Description: {body.job_description}
+Required Skills: {', '.join(body.skills_required)}
+Experience Level: {body.experience_level}
+
+Your task:
+1. Analyze the job description and extract key responsibilities and skill requirements.
+2. Generate a structured mock interview tailored to the job.
+
+The mock interview must include:
+- 5–8 technical questions directly based on required skills
+- 2–3 conceptual/theory questions
+- 2–3 real-world/problem-solving questions
+- 1–2 behavioral questions (aligned with role expectations)
+
+For each question, also provide:
+- Expected answer (concise but correct)
+- Difficulty level (Easy / Medium / Hard)
+
+Constraints:
+- Questions must be relevant to the job (no generic questions)
+- Avoid repetition
+- Focus on practical and interview-relevant content
+- Keep answers accurate and to the point
+
+Output Format (JSON):
+{{
+  "job_title": "{body.job_title}",
+  "questions": [
+    {{
+      "type": "technical/conceptual/problem-solving/behavioral",
+      "question": "",
+      "expected_answer": "",
+      "difficulty": ""
+    }}
+  ]
+}}
+"""
+    fallback = {
+        "job_title": body.job_title,
+        "questions": []
+    }
+    
+    result = call_llm_json(prompt, fallback=fallback)
+    return result
+

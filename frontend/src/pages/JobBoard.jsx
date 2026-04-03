@@ -40,6 +40,8 @@ export default function JobBoard() {
   const [hoveredSkill, setHoveredSkill] = useState(null);
   const [hoveredRole, setHoveredRole] = useState(null);
   const [trendsExpanded, setTrendsExpanded] = useState(false);
+  const [generatingMock, setGeneratingMock] = useState(null);
+  const [mockInterviewData, setMockInterviewData] = useState(null);
 
   useEffect(() => {
     fetchJobs();
@@ -120,6 +122,23 @@ export default function JobBoard() {
       alert(err.response?.data?.detail || 'Failed to apply');
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleMockInterview = async (job) => {
+    setGeneratingMock(job.id);
+    try {
+      const res = await axios.post(`${API}/jobs/mock-interview`, {
+        job_title: job.title,
+        job_description: job.description || "",
+        skills_required: job.skills_required || [],
+        experience_level: job.experience_level || ""
+      });
+      setMockInterviewData(res.data);
+    } catch (err) {
+      alert("Failed to generate mock interview");
+    } finally {
+      setGeneratingMock(null);
     }
   };
 
@@ -456,6 +475,15 @@ export default function JobBoard() {
                 </div>
 
                 <button
+                  className="btn btn-primary"
+                  style={{ width: '100%', marginTop: '8px', background: 'var(--primary)', color: '#fff' }}
+                  onClick={() => handleMockInterview(job)}
+                  disabled={generatingMock === job.id}
+                >
+                  {generatingMock === job.id ? 'Generating Mock Interview...' : 'Take Mock Interview'}
+                </button>
+
+                <button
                   className="btn btn-secondary"
                   style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => {
@@ -554,6 +582,50 @@ export default function JobBoard() {
                 {applying ? 'Applying...' : appliedJobs.has(activeJob.id) ? 'Already Applied' : 'Apply Now with Resume'}
               </button>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal for Mock Interview */}
+      {mockInterviewData && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 110,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+        }}>
+          <motion.div
+            className="glass-card"
+            style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', padding: '32px' }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ fontSize: '24px', marginBottom: '4px' }}>Generated Mock Interview</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{mockInterviewData.job_title}</p>
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setMockInterviewData(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {(mockInterviewData.questions || []).map((q, i) => (
+                <div key={i} className="glass-card" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', textTransform: 'uppercase' }}>{q.type}</span>
+                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: q.difficulty === 'Hard' ? 'var(--rose)' : q.difficulty === 'Medium' ? 'var(--amber)' : 'var(--emerald)' }}>{q.difficulty}</span>
+                  </div>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', lineHeight: '1.5' }}>Q{i + 1}: {q.question}</h4>
+                  <div style={{ background: 'var(--bg-lighter)', padding: '16px', borderRadius: '8px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 'bold' }}>Expected Answer:</p>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>{q.expected_answer}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
       )}
